@@ -16,15 +16,12 @@ plugins {
 group = "com.example"
 version = "0.0.1"
 java.sourceCompatibility = JavaVersion.VERSION_17
-val jooqVersion by extra("3.18.3")
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
-    implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework:spring-jdbc")
 
@@ -34,10 +31,11 @@ dependencies {
 //    implementation("org.jetbrains.kotlin:kotlin-reflect")
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
-    jooqGenerator("org.postgresql:postgresql") // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    jooqGenerator("org.postgresql:postgresql:42.5.4") // https://mvnrepository.com/artifact/org.postgresql/postgresql
 
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.postgresql:r2dbc-postgresql")
+    runtimeOnly("io.r2dbc:r2dbc-pool")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
@@ -61,15 +59,8 @@ flyway {
     password = "demo_webflux"
 }
 
-buildscript {
-    configurations["classpath"].resolutionStrategy.eachDependency {
-        if (requested.group == "org.jooq") {
-            useVersion("3.18.3")
-        }
-    }
-}
-
 jooq {
+    version.set("3.18.3")
     configurations {
         create("main") {  // name of the jOOQ configuration
             generateSchemaSourceOnCompilation.set(true)  // default (can be omitted)
