@@ -10,9 +10,16 @@ spring:
     password: demo_webflux
     url: jdbc:postgresql://localhost:5432/demo_webflux
   r2dbc:
+    pool:
+      enabled: true
+      min-idle: 1
+      initial-size: 2
+      max-size: 5
+      max-idle-time: 20s
+      max-life-time: 10s
     url: r2dbc:postgresql://localhost:5432/demo_webflux
     username: demo_webflux
     password: demo_webflux
 logging:
   level:
-    root: info
+    root: debug

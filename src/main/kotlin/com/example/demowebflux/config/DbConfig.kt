@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 class DbConfig {
-    @Bean
+//    @Bean
     fun connectionFactory(): ConnectionFactory {
         val options = ConnectionFactoryOptions.parse("r2dbc:pool://localhost:5432/demo_webflux")
             .mutate()
