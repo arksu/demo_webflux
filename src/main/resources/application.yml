@@ -15,4 +15,4 @@ spring:
     password: demo_webflux
 logging:
   level:
-    root: debug
+    root: info

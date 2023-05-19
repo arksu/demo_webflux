@@ -12,8 +12,10 @@ import org.springframework.context.annotation.Configuration
 class DbConfig {
     @Bean
     fun connectionFactory(): ConnectionFactory {
-        val options = ConnectionFactoryOptions.parse("r2dbc:postgresql://localhost:5432/demo_webflux")
+        val options = ConnectionFactoryOptions.parse("r2dbc:pool://localhost:5432/demo_webflux")
             .mutate()
+            .option(ConnectionFactoryOptions.DRIVER, "pool")
+            .option(ConnectionFactoryOptions.PROTOCOL,"postgresql")
             .option(ConnectionFactoryOptions.USER, "demo_webflux")
             .option(ConnectionFactoryOptions.PASSWORD, "demo_webflux")
             .build()

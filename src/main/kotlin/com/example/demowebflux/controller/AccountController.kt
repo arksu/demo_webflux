@@ -10,13 +10,13 @@ import reactor.core.publisher.Mono
 import java.util.*
 
 @RestController
-@RequestMapping("/test")
-class TestController(
+@RequestMapping("/account")
+class AccountController(
     val accountRepo: AccountRepo
 ) {
 
     @GetMapping("{id}")
-    fun test(@PathVariable id: UUID): Mono<AccountResponseDTO> {
+    fun getById(@PathVariable id: UUID): Mono<AccountResponseDTO> {
         return accountRepo.findById(id).map {
             AccountResponseDTO(it.id, it.name)
         }
