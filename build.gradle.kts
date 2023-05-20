@@ -85,6 +85,7 @@ jooq {
                     database.apply {
                         name = "org.jooq.meta.postgres.PostgresDatabase"
                         inputSchema = dbDatabase
+                        excludes = "flyway_schema_history"
                     }
                     generate.apply {
                         isDeprecated = false
