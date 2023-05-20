@@ -28,8 +28,9 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
     implementation("org.flywaydb:flyway-core:9.18.0")
 
-//    implementation("org.jetbrains.kotlin:kotlin-reflect")
-//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
     jooqGenerator("org.postgresql:postgresql:42.5.4") // https://mvnrepository.com/artifact/org.postgresql/postgresql
 
@@ -52,11 +53,17 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val dbHost = System.getenv("DB_HOST") ?: "localhost"
+val dbPort = System.getenv("DB_PORT") ?: 5400
+val dbDatabase = System.getenv("DB_NAME") ?: "demo_webflux"
+val dbUser = System.getenv("DB_USER") ?: "postgres"
+val dbPassword = System.getenv("DB_PASSWORD") ?: "postgres"
+
 flyway {
-    url = "jdbc:postgresql://localhost/demo_webflux"
-    schemas = arrayOf("demo_webflux")
-    user = "demo_webflux"
-    password = "demo_webflux"
+    url = "jdbc:postgresql://${dbHost}:${dbPort}/${dbDatabase}"
+    schemas = arrayOf(dbDatabase)
+    user = dbUser
+    password = dbPassword
 }
 
 jooq {
@@ -69,15 +76,15 @@ jooq {
                 logging = Logging.WARN
                 jdbc.apply {
                     driver = "org.postgresql.Driver"
-                    url = "jdbc:postgresql://localhost:5432/demo_webflux"
-                    user = "demo_webflux"
-                    password = "demo_webflux"
+                    url = "jdbc:postgresql://${dbHost}:${dbPort}/${dbDatabase}"
+                    user = dbUser
+                    password = dbPassword
                 }
                 generator.apply {
                     name = "org.jooq.codegen.DefaultGenerator"
                     database.apply {
                         name = "org.jooq.meta.postgres.PostgresDatabase"
-                        inputSchema = "demo_webflux"
+                        inputSchema = dbDatabase
                     }
                     generate.apply {
                         isDeprecated = false

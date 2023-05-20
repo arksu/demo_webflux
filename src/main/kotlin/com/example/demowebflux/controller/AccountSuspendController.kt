@@ -6,21 +6,16 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Mono
 import java.util.*
 
 @RestController
-@RequestMapping("/account")
-class AccountController(
+@RequestMapping("/account_suspend")
+class AccountSuspendController(
     val accountService: AccountService
 ) {
 
     @GetMapping("{id}")
-    fun getById(@PathVariable id: UUID): Mono<AccountResponseDTO> {
-        return accountService.getMono(id)
-    }
-    @GetMapping("s/{id}")
-    suspend fun getSById(@PathVariable id: UUID): AccountResponseDTO {
+    suspend fun getById(@PathVariable id: UUID): AccountResponseDTO {
         return accountService.getSuspend(id)
     }
 }

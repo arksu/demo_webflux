@@ -6,19 +6,18 @@ spring:
     schemas: demo_webflux
     placeholder-replacement: true
     enabled: true
-    user: demo_webflux
-    password: demo_webflux
-    url: jdbc:postgresql://localhost:5432/demo_webflux
+    user: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}
   r2dbc:
     pool:
       enabled: true
       initial-size: 3
-      max-size: 5
+      max-size: 3
       max-idle-time: 20s
-      max-life-time: 10s
-    url: r2dbc:postgresql://localhost:5432/demo_webflux
-    username: demo_webflux
-    password: demo_webflux
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
 
 logging:
   level:
