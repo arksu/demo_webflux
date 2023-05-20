@@ -1,4 +1,4 @@
-package com.example.demowebflux
+package com.example.demowebflux.repo
 
 import com.example.jooq.Tables.ACCOUNT
 import com.example.jooq.tables.pojos.Account
@@ -10,13 +10,15 @@ import java.util.*
 
 @Repository
 class AccountRepo(
-    val dslContext: DSLContext
+    private val dslContext: DSLContext
 ) {
     fun findById(id: UUID): Mono<Account> {
 
         return dslContext.selectFrom(ACCOUNT)
             .where(ACCOUNT.ID.eq(id))
             .toMono()
-            .map(::Account)
+//            .map(::Account)
+//            .map { it -> Account(it) }
+            .map { r -> r.into(Account::class.java) }
     }
 }
