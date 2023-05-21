@@ -24,6 +24,9 @@ class CurrencyService(
     }
 
     fun getByName(name: String): Currency? {
-        return map[name]
+        // TODO: воткнуть блокировку во время ожидания reload (асинхронно)
+        val currency = map[name]
+        if (currency?.enabled == false) return null
+        return currency
     }
 }

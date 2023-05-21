@@ -17,10 +17,10 @@ class InvoiceService(
     private val invoiceRepo: InvoiceRepo,
 ) {
     suspend fun create(request: InvoiceRequestDTO): Invoice {
-        val merchant =
-            merchantRepo.findById(request.merchantId).awaitSingleOrNull() ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Merchant not found")
-        val currency = currencyService.getByName(request.currency) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
-        if (!currency.enabled) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
+        val merchant = merchantRepo.findById(request.merchantId).awaitSingleOrNull()
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Merchant not found")
+        val currency = currencyService.getByName(request.currency)
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
 
         val new = Invoice()
         new.merchantId = merchant.id

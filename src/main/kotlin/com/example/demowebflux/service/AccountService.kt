@@ -1,6 +1,6 @@
 package com.example.demowebflux.service
 
-import com.example.demowebflux.controller.AccountResponseDTO
+import com.example.demowebflux.controller.dto.AccountResponseDTO
 import com.example.demowebflux.repo.AccountRepo
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.stereotype.Service

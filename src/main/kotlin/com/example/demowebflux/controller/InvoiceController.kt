@@ -17,9 +17,7 @@ class InvoiceController(
     @ResponseStatus(HttpStatus.CREATED)
     suspend fun add(@RequestBody @Valid request: InvoiceRequestDTO): InvoiceResponseDTO {
         return invoiceService.create(request).let {
-            InvoiceResponseDTO(
-                it
-            )
+            InvoiceResponseDTO(it)
         }
     }
 }

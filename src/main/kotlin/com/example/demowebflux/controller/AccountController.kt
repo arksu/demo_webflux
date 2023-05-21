@@ -1,11 +1,7 @@
 package com.example.demowebflux.controller
 
-import com.example.demowebflux.repo.AccountRepo
+import com.example.demowebflux.controller.dto.AccountResponseDTO
 import com.example.demowebflux.service.AccountService
-import com.example.jooq.Tables
-import com.example.jooq.tables.pojos.Account
-import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.springframework.http.MediaType.*
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -32,7 +28,7 @@ class AccountController(
     }
 
     @GetMapping("s/{id}")
-    suspend fun getSById(@PathVariable id: UUID): AccountResponseDTO {
+    suspend fun getSuspendById(@PathVariable id: UUID): AccountResponseDTO {
         return accountService.getSuspend(id)
     }
 }

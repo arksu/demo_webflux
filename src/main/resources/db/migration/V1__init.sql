@@ -28,7 +28,7 @@ create table if not exists invoice
     id                uuid                              default gen_random_uuid() not null primary key,
     customer_id       varchar(64)              not null,
     merchant_id       uuid                     not null,
-    merchant_order_id varchar(512)             not null,
+    merchant_order_id varchar(512)             not null check ( merchant_order_id <> '' ),
     currency_id       int                      not null references currency (id),
     amount            decimal                  not null check ( amount > 0 ),
     commission        decimal                  not null check ( commission >= 0 ),

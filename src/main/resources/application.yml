@@ -12,8 +12,8 @@ spring:
   r2dbc:
     pool:
       enabled: true
-      initial-size: 3
-      max-size: 3
+      initial-size: 2
+      max-size: 2
       max-idle-time: 120s
     url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}
     username: ${DB_USER:postgres}
@@ -21,5 +21,5 @@ spring:
 
 logging:
   level:
-    root: debug
+    root: info
     com.example: debug
