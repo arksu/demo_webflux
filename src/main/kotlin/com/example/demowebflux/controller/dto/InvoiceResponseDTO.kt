@@ -20,7 +20,7 @@ data class InvoiceResponseDTO(
         model.merchantId,
         model.customerId,
         model.merchantOrderId,
-        // TODO
+        // TODO currency
         model.currencyId.toString(),
         model.amount,
         model.description,

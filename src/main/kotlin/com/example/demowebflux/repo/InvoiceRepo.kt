@@ -6,11 +6,21 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
+import java.util.*
 
 @Repository
 class InvoiceRepo(
     private val dslContext: DSLContext
 ) {
+    fun findByIdForUpdate(id: UUID): Mono<Invoice> {
+        return dslContext.selectFrom(INVOICE)
+            .where(INVOICE.ID.eq(id))
+            .forUpdate()
+            .skipLocked()
+            .toMono()
+            .map(::Invoice)
+    }
+
     fun save(invoice: Invoice): Mono<Invoice> {
         return dslContext.insertInto(INVOICE)
             .set(INVOICE.MERCHANT_ID, invoice.merchantId)

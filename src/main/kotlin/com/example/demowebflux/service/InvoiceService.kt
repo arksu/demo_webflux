@@ -20,7 +20,6 @@ class InvoiceService(
         val merchant = merchantRepo.findById(request.merchantId).awaitSingleOrNull()
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Merchant not found")
         val currency = currencyService.getByName(request.currency)
-            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
 
         val new = Invoice()
         new.merchantId = merchant.id

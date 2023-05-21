@@ -42,13 +42,13 @@ create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED
 
 create table if not exists "order"
 (
-    id                uuid                              default gen_random_uuid() not null primary key,
-    invoice_id        uuid                     not null references invoice (id),
-    status            order_status_type        not null default 'NEW',
-    confirmations     int                      not null check ( confirmations >= 0 ),
-    selected_currency int                      null references currency (id),
-    amount            decimal                  not null check ( amount > 0 ),
-    created           timestamp with time zone not null
+    id                   uuid                              default gen_random_uuid() not null primary key,
+    invoice_id           uuid unique              not null references invoice (id),
+    status               order_status_type        not null default 'NEW',
+    confirmations        int                      not null check ( confirmations >= 0 ),
+    selected_currency_id int                      null references currency (id),
+    amount               decimal                  not null check ( amount > 0 ),
+    created              timestamp with time zone not null default now()
 );
 
 insert into merchant(id, name, email, commission)
