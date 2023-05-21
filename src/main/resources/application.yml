@@ -14,11 +14,12 @@ spring:
       enabled: true
       initial-size: 3
       max-size: 3
-      max-idle-time: 20s
+      max-idle-time: 120s
     url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
 
 logging:
   level:
-    root: info
+    root: debug
+    com.example: debug
