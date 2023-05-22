@@ -9,8 +9,8 @@ export const options = {
     },
     // Ramp the number of virtual users up and down
     stages: [
-        {duration: "4s", target: 1000},
-        {duration: "20s", target: 1000},
+        {duration: "4s", target: 100},
+        {duration: "20s", target: 100},
         {duration: "4s", target: 0},
     ],
 };
@@ -19,10 +19,11 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-// Simulated user behavior
-export default function () {
+const merchantId = "2a3e59ff-b549-4ca2-979c-e771c117f350"
+
+function createInvoice() {
     let data = {
-        merchantId: "2a3e59ff-b549-4ca2-979c-e771c117f350",
+        merchantId: merchantId,
         customerId: "client-" + getRandomInt(1000),
         orderId: getRandomInt(1000000),
         currency: "USDT-TRC20",
@@ -37,9 +38,37 @@ export default function () {
 
     // Validate response status
     check(res, {
-        "status was 201": (r) => {
-            return r.status == 201
+        "createInvoice status was 201": (r) => {
+            return r.status === 201
         }
     });
-    sleep(0.2);
+
+    let result = res.json()
+    return result.id
+}
+
+function createOrder(invoiceId) {
+    let data = {
+        invoiceId: invoiceId,
+        selectedCurrency: "USDT-TRC20",
+        amount: Math.random() * 10000000 + 1,
+    }
+    let res = http.post("http://localhost:8046/order", JSON.stringify(data), {
+        headers: {'Content-Type': 'application/json'},
+    });
+
+    // Validate response status
+    check(res, {
+        "createOrder status was 200": (r) => {
+            return r.status === 200
+        }
+    });
+}
+
+// Simulated user behavior
+export default function () {
+    // let invoiceId = createInvoice()
+    // sleep(0.2);
+    // createOrder(invoiceId)
+    createOrder("13bcbbe2-c82c-410d-8057-44c219a0a04e")
 }

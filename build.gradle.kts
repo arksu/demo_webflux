@@ -29,6 +29,8 @@ dependencies {
 
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
     implementation("org.flywaydb:flyway-core:9.18.0")
+    implementation("org.jooq:jooq-kotlin:3.18.4")
+    implementation("org.jooq:jooq-kotlin-coroutines:3.18.4")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
@@ -69,7 +71,7 @@ flyway {
 }
 
 jooq {
-    version.set("3.18.3")
+    version.set("3.18.4")
     configurations {
         create("main") {  // name of the jOOQ configuration
             generateSchemaSourceOnCompilation.set(true)  // default (can be omitted)

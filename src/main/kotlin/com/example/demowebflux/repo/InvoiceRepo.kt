@@ -12,8 +12,8 @@ import java.util.*
 class InvoiceRepo(
     private val dslContext: DSLContext
 ) {
-    fun findByIdForUpdate(id: UUID): Mono<Invoice> {
-        return dslContext.selectFrom(INVOICE)
+    fun findByIdForUpdate(id: UUID, context: DSLContext): Mono<Invoice> {
+        return context.selectFrom(INVOICE)
             .where(INVOICE.ID.eq(id))
             .forUpdate()
             .skipLocked()

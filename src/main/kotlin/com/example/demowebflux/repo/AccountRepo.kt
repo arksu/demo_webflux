@@ -3,11 +3,9 @@ package com.example.demowebflux.repo
 import com.example.jooq.Tables.ACCOUNT
 import com.example.jooq.tables.pojos.Account
 import org.jooq.DSLContext
-import org.jooq.impl.DSL.noCondition
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 import reactor.kotlin.core.publisher.toMono
 import java.util.*
 
@@ -29,5 +27,15 @@ class AccountRepo(
             dslContext.selectFrom(ACCOUNT)
                 .where(ACCOUNT.ID.isNotNull)
         ).map(::Account)
+    }
+
+    fun add(name: String, ctx: DSLContext): Mono<Account> {
+        return ctx.insertInto(ACCOUNT)
+            .set(ACCOUNT.NAME, name)
+            .set(ACCOUNT.DESCRIPTION, "auto")
+            .returning()
+            .toMono()
+            .map(::Account)
+
     }
 }
