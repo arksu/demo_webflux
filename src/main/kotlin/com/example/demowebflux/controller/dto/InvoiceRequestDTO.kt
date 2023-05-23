@@ -1,5 +1,6 @@
 package com.example.demowebflux.controller.dto
 
+import com.example.jooq.enums.CommissionType
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import java.math.BigDecimal
@@ -19,5 +20,6 @@ data class InvoiceRequestDTO(
     @field:NotBlank
     val successUrl: String,
     @field:NotBlank
-    val failUrl: String
+    val failUrl: String,
+    val commissionCharge: CommissionType = CommissionType.CLIENT
 )

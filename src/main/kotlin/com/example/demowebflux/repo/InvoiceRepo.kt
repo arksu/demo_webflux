@@ -21,17 +21,9 @@ class InvoiceRepo(
             .map(::Invoice)
     }
 
-    fun save(invoice: Invoice): Mono<Invoice> {
+    fun save(entity: Invoice): Mono<Invoice> {
         return dslContext.insertInto(INVOICE)
-            .set(INVOICE.MERCHANT_ID, invoice.merchantId)
-            .set(INVOICE.CUSTOMER_ID, invoice.customerId)
-            .set(INVOICE.MERCHANT_ORDER_ID, invoice.merchantOrderId)
-            .set(INVOICE.CURRENCY_ID, invoice.currencyId)
-            .set(INVOICE.AMOUNT, invoice.amount)
-            .set(INVOICE.COMMISSION, invoice.commission)
-            .set(INVOICE.DESCRIPTION, invoice.description)
-            .set(INVOICE.SUCCESS_URL, invoice.successUrl)
-            .set(INVOICE.FAIL_URL, invoice.failUrl)
+            .set(dslContext.newRecord(INVOICE, entity))
             .returning()
             .toMono()
             .map(::Invoice)

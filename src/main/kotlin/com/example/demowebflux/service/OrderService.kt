@@ -17,6 +17,7 @@ import org.jooq.kotlin.coroutines.transactionCoroutine
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import java.math.BigDecimal
 
 @Service
 class OrderService(
@@ -28,17 +29,24 @@ class OrderService(
 ) {
     val log by LoggerDelegate()
 
-    suspend fun startOrder(request: CreateOrderRequestDTO): Order {
+    suspend fun startOrderTest(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
             val invoice = invoiceRepo.findByIdForUpdate(request.invoiceId, trx.dsl()).awaitFirstOrNull()
                 ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
 
             val new = Order()
             new.invoiceId = invoice.id
-            new.amount = request.amount
+            new.customerAmount = invoice.amount
+            new.customerAmountFact = invoice.amount
+            new.merchantAmountOrder = invoice.amount
+            new.merchantAmount = invoice.amount
+            new.referenceAmount = invoice.amount
+            new.exchangeRate = BigDecimal.ONE
             new.selectedCurrencyId = currencyService.getByName(request.selectedCurrency).id
             new.status = OrderStatusType.NEW
             new.confirmations = 0
+            new.merchantCommission = BigDecimal.ZERO
+            new.systemCommission = BigDecimal.ZERO
 
             val save = orderRepo.save(new, trx.dsl()).awaitFirst()
 
@@ -50,6 +58,31 @@ class OrderService(
 
             // TODO test
             accountRepo.add(request.invoiceId.toString(), trx.dsl()).awaitFirstOrNull()
+
+            save
+        }
+    }
+
+    suspend fun startOrder(request: CreateOrderRequestDTO): Order {
+        return dslContext.transactionCoroutine { trx ->
+            val invoice = invoiceRepo.findByIdForUpdate(request.invoiceId, trx.dsl()).awaitFirstOrNull()
+                ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
+
+            val new = Order()
+            new.invoiceId = invoice.id
+            new.customerAmount = invoice.amount
+            new.customerAmountFact = invoice.amount
+            new.merchantAmountOrder = invoice.amount
+            new.merchantAmount = invoice.amount
+            new.referenceAmount = invoice.amount
+            new.exchangeRate = BigDecimal.ONE
+            new.selectedCurrencyId = currencyService.getByName(request.selectedCurrency).id
+            new.status = OrderStatusType.NEW
+            new.confirmations = 0
+            new.merchantCommission = BigDecimal.ZERO
+            new.systemCommission = BigDecimal.ZERO
+
+            val save = orderRepo.save(new, trx.dsl()).awaitFirst()
 
             save
         }

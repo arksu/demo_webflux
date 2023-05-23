@@ -11,11 +11,7 @@ import reactor.kotlin.core.publisher.toMono
 class OrderRepo(private val dslContext: DSLContext) {
     fun save(entity: Order, context: DSLContext): Mono<Order> {
         return context.insertInto(ORDER)
-            .set(ORDER.INVOICE_ID, entity.invoiceId)
-            .set(ORDER.SELECTED_CURRENCY_ID, entity.selectedCurrencyId)
-            .set(ORDER.STATUS, entity.status)
-            .set(ORDER.CONFIRMATIONS, entity.confirmations)
-            .set(ORDER.AMOUNT, entity.amount)
+            .set(dslContext.newRecord(ORDER, entity))
             .returning()
             .toMono()
             .map(::Order)

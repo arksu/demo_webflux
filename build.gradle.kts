@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jooq.meta.jaxb.Logging
 
 plugins {
-    val kotlinVersion = "1.8.21"
-    val springVersion = "3.0.7"
+    val kotlinVersion = "1.8.21" // https://kotlinlang.org/
+    val springVersion = "3.0.7" // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
@@ -71,7 +71,7 @@ flyway {
 }
 
 jooq {
-    version.set("3.18.4")
+    version.set("3.18.4") // https://mvnrepository.com/artifact/org.jooq/jooq
     configurations {
         create("main") {  // name of the jOOQ configuration
             generateSchemaSourceOnCompilation.set(true)  // default (can be omitted)

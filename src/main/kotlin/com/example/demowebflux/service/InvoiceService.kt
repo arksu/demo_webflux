@@ -27,10 +27,10 @@ class InvoiceService(
         new.merchantOrderId = request.orderId
         new.currencyId = currency.id
         new.amount = request.amount
-        new.commission = merchant.commission
         new.description = request.description
         new.successUrl = request.successUrl
         new.failUrl = request.failUrl
+        new.commissionType = request.commissionCharge
 
         return invoiceRepo.save(new).awaitSingle()
     }
