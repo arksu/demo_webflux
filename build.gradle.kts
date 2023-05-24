@@ -44,6 +44,9 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.testcontainers:testcontainers:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
+    testImplementation("org.testcontainers:postgresql:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
+    testImplementation("org.testcontainers:junit-jupiter:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
 }
 
 tasks.withType<KotlinCompile> {

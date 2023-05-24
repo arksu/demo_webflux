@@ -4,9 +4,15 @@ demo project to test webflux, r2dbc, jooq features
 order status:
 - new - initial invoice status
 - pending - some amount received and waiting for confirmations
-- expired - look for the “amount” field to verify payment. The full amount may not have been paid.
+- not_enough - the full amount may not have been paid.
 - completed - paid in full
 - mismatch - overpaid
 - error - some error has occurred
 - cancelled - no payment received within allotted time
 
+merchant -> invoice -> order -> customer (wallet)
+customer -> blockchain -> trx -> wallet
+check wallet trx amount -> 
+    equal order amount -> complete order
+    overpaid -> complete order, alert support
+    less than required -> ignore trx, wallet hold as waited

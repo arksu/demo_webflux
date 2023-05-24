@@ -10,6 +10,9 @@ create table if not exists currency
 
 insert into currency (name, display_name, enabled)
 values ('USDT-TRC20', 'Tether TRC-20', true),
+       ('USDT-TRC20-NILE', 'TEST Nile Tether TRC-20', true),
+       ('USDD-TRC20-NILE', 'TEST Nile USDD TRC-20', true),
+       ('TRX-NILE', 'TEST Nile Tron', true),
        ('USDT-ERC20', 'Tether ERC-20', false),
        ('ETH', 'Ethereum', false),
        ('TRX', 'Tron', false);
@@ -52,7 +55,7 @@ create table if not exists invoice
     created           timestamp with time zone not null default now()
 );
 
-create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'MISMATCH', 'EXPIRED');
+create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'MISMATCH', 'NOT_ENOUGH');
 
 create table if not exists "order"
 (
@@ -62,7 +65,7 @@ create table if not exists "order"
     status                order_status_type        not null default 'NEW',
     -- сколько берем с клиента
     customer_amount       decimal                  not null check ( customer_amount > 0 ),
-    -- сколько фактически пришло от клиента
+    -- сколько фактически пришло от клиента (может он отправил больше чем надо)
     customer_amount_fact  decimal                  not null check ( customer_amount_fact >= 0 ),
     -- сколько отдаем мерчанту в валюте сделки с учетом комиссий
     merchant_amount_order decimal                  not null check ( merchant_amount_order > 0 ),
@@ -83,9 +86,23 @@ create table if not exists "order"
     created               timestamp with time zone not null default now()
 );
 
-insert into merchant(id, login, email, commission)
-values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'merchant1', 'merchant1@email.com', 1.5);
+create type wallet_type as enum ('TRON', 'ETH');
+create table if not exists blockchain_income_wallet
+(
+    address        varchar(512)             not null primary key,
+    type           wallet_type              not null,
+    network        varchar(255)             not null,
+    is_wait_income bool                     not null default false,
+    updated        timestamp with time zone not null default now()
+);
 
+-- test data
+insert into merchant(id, login, email, commission)
+values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
+
+
+
+-- debug
 create table if not exists account
 (
     id          uuid default gen_random_uuid() primary key,
@@ -93,4 +110,4 @@ create table if not exists account
     description text
 );
 insert into account(id, name, description)
-VALUES ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d7', 'foo', 'bar');
+VALUES ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d7', 'foo', 'bar'), ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d2', 'fo22o', 'b22ar');
