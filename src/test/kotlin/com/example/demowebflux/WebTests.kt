@@ -35,7 +35,7 @@ class WebTests(
     @LocalServerPort
     val port: Int,
 ) {
-    val merchantId = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
+    private val merchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
 
     @Autowired
     private lateinit var dslContext: DSLContext
