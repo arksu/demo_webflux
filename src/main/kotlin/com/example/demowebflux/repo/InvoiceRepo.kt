@@ -12,7 +12,14 @@ import java.util.*
 class InvoiceRepo(
     private val dslContext: DSLContext
 ) {
-    fun findByIdForUpdate(id: UUID, context: DSLContext): Mono<Invoice> {
+    fun findById(id: UUID, context: DSLContext): Mono<Invoice> {
+        return context.selectFrom(INVOICE)
+            .where(INVOICE.ID.eq(id))
+            .toMono()
+            .map(::Invoice)
+    }
+
+    fun findByIdForUpdateSkipLocked(id: UUID, context: DSLContext): Mono<Invoice> {
         return context.selectFrom(INVOICE)
             .where(INVOICE.ID.eq(id))
             .forUpdate()

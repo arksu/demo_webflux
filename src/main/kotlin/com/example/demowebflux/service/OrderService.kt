@@ -31,7 +31,7 @@ class OrderService(
 
     suspend fun startOrderTest(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
-            val invoice = invoiceRepo.findByIdForUpdate(request.invoiceId, trx.dsl()).awaitFirstOrNull()
+            val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitFirstOrNull()
                 ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
 
             val new = Order()
@@ -65,7 +65,7 @@ class OrderService(
 
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
-            val invoice = invoiceRepo.findByIdForUpdate(request.invoiceId, trx.dsl()).awaitFirstOrNull()
+            val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitFirstOrNull()
                 ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
 
             val new = Order()

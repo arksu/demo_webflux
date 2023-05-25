@@ -6,6 +6,7 @@ import com.example.demowebflux.repo.MerchantRepo
 import com.example.jooq.tables.pojos.Invoice
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.jooq.exception.IntegrityConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -32,6 +33,10 @@ class InvoiceService(
         new.failUrl = request.failUrl
         new.commissionType = request.commissionCharge
 
-        return invoiceRepo.save(new).awaitSingle()
+        try {
+            return invoiceRepo.save(new).awaitSingle()
+        } catch (e: IntegrityConstraintViolationException) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Check your request for uniq (orderId)")
+        }
     }
 }

@@ -52,7 +52,9 @@ create table if not exists invoice
     success_url       varchar(512)             not null,
     -- куда отправим в случае ошибки
     fail_url          varchar(512)             not null,
-    created           timestamp with time zone not null default now()
+    created           timestamp with time zone not null default now(),
+    -- в пределах мерчанта order id должен быть уникален
+    unique (merchant_id, merchant_order_id)
 );
 
 create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'MISMATCH', 'NOT_ENOUGH');
@@ -101,7 +103,6 @@ insert into merchant(id, login, email, commission)
 values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
 
 
-
 -- debug
 create table if not exists account
 (
@@ -110,4 +111,5 @@ create table if not exists account
     description text
 );
 insert into account(id, name, description)
-VALUES ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d7', 'foo', 'bar'), ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d2', 'fo22o', 'b22ar');
+VALUES ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d7', 'foo', 'bar'),
+       ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d2', 'fo22o', 'b22ar');
