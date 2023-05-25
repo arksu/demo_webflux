@@ -35,4 +35,11 @@ class InvoiceRepo(
             .toMono()
             .map(::Invoice)
     }
+
+    fun updateStatus(invoice: Invoice, context: DSLContext): Mono<Int> {
+        return context.update(INVOICE)
+            .set(INVOICE.STATUS, invoice.status)
+            .where(INVOICE.ID.eq(invoice.id))
+            .toMono()
+    }
 }

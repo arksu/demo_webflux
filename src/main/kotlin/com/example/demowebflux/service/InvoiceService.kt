@@ -3,6 +3,7 @@ package com.example.demowebflux.service
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.MerchantRepo
+import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.tables.pojos.Invoice
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
@@ -23,6 +24,7 @@ class InvoiceService(
         val currency = currencyService.getByName(request.currency)
 
         val new = Invoice()
+        new.status = InvoiceStatusType.NEW
         new.merchantId = merchant.id
         new.customerId = request.customerId
         new.merchantOrderId = request.orderId

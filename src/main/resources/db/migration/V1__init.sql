@@ -35,6 +35,7 @@ create type invoice_status_type as enum ('NEW', 'PROCESSING', 'TERMINATED');
 create table if not exists invoice
 (
     id                uuid                              default gen_random_uuid() not null primary key,
+    status            invoice_status_type      not null,
     merchant_id       uuid                     not null,
     -- сколько денег хочет получить/отправить мерчант за сделку
     amount            decimal                  not null check ( amount > 0 ),
@@ -64,7 +65,7 @@ create table if not exists "order"
     id                    uuid                              default gen_random_uuid() not null primary key,
     -- на 1 счет можем создать только один order
     invoice_id            uuid unique              not null references invoice (id),
-    status                order_status_type        not null default 'NEW',
+    status                order_status_type        not null,
     -- сколько берем с клиента
     customer_amount       decimal                  not null check ( customer_amount > 0 ),
     -- сколько фактически пришло от клиента (может он отправил больше чем надо)
