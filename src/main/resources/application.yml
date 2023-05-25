@@ -24,4 +24,5 @@ logging:
     root: info
     com.example: info
 
-#app:
+app:
+  decimalScale: 8 # до скольки знаков после запятой округляем значения

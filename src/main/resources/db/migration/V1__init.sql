@@ -62,31 +62,31 @@ create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED
 
 create table if not exists "order"
 (
-    id                    uuid                              default gen_random_uuid() not null primary key,
+    id                         uuid                              default gen_random_uuid() not null primary key,
     -- на 1 счет можем создать только один order
-    invoice_id            uuid unique              not null references invoice (id),
-    status                order_status_type        not null,
+    invoice_id                 uuid unique              not null references invoice (id),
+    status                     order_status_type        not null,
+    -- какая была сумма по счету на момент создания ордера
+    invoice_amount             decimal                  not null,
     -- сколько берем с клиента
-    customer_amount       decimal                  not null check ( customer_amount > 0 ),
+    customer_amount            decimal                  not null check ( customer_amount > 0 ),
     -- сколько фактически пришло от клиента (может он отправил больше чем надо)
-    customer_amount_fact  decimal                  not null check ( customer_amount_fact >= 0 ),
+    customer_amount_fact       decimal                  not null check ( customer_amount_fact >= 0 ),
     -- сколько отдаем мерчанту в валюте сделки с учетом комиссий
-    merchant_amount_order decimal                  not null check ( merchant_amount_order > 0 ),
+    merchant_amount_order      decimal                  not null check ( merchant_amount_order > 0 ),
     -- сколько отдаем мерчанту в валюте invoice
-    merchant_amount       decimal                  not null check ( merchant_amount > 0 ),
+    merchant_amount            decimal                  not null check ( merchant_amount > 0 ),
     -- эталонная сумма сделки в валюте которую выбрал клиент, от которой идет расчет (invoice.amount -> exchange_rate[selected_currency_id])
-    reference_amount      decimal                  not null check ( reference_amount > 0 ),
+    reference_amount           decimal                  not null check ( reference_amount > 0 ),
     -- курс по которому идет перерасчет валюты invoice в валюту сделки (invoice -> order) order.amount = invoice.amount * exchange_rate
-    exchange_rate         decimal                  not null check ( exchange_rate > 0 ),
+    exchange_rate              decimal                  not null check ( exchange_rate > 0 ),
     -- какую валюту выбрал пользователь для оплаты счета
-    selected_currency_id  int                      null references currency (id),
+    selected_currency_id       int                      null references currency (id),
     -- количество подтверждений сети при проведении транзакции
-    confirmations         int                      not null check ( confirmations >= 0 ),
+    confirmations              int                      not null check ( confirmations >= 0 ),
     -- сумма комиссии которую взимаем с мерчанта
-    merchant_commission   decimal                  not null check ( merchant_commission >= 0 ),
-    -- комиссия системы
-    system_commission     decimal                  not null check ( system_commission >= 0 ),
-    created               timestamp with time zone not null default now()
+    merchant_commission_amount decimal                  not null check ( merchant_commission_amount >= 0 ),
+    created                    timestamp with time zone not null default now()
 );
 
 create type wallet_type as enum ('TRON', 'ETH');

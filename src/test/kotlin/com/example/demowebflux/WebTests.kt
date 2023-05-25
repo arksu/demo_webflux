@@ -233,7 +233,7 @@ class WebTests(
 
     @Test
     fun testCreateOrder() {
-        // 1 занят другим тестом
+        // #1 занят другим тестом
         val response = createOrderWithNumber(2)
         runBlocking {
             val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()

@@ -1,18 +1,17 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
-import com.example.demowebflux.repo.AccountRepo
 import com.example.demowebflux.repo.InvoiceRepo
+import com.example.demowebflux.repo.MerchantRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
+import com.example.demowebflux.util.percentToMult
+import com.example.jooq.enums.CommissionType
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.withContext
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 import org.springframework.http.HttpStatus
@@ -26,10 +25,14 @@ class OrderService(
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val dslContext: DSLContext,
-    private val accountRepo: AccountRepo
+    private val exchangeRateService: ExchangeRateService,
+    private val merchantRepo: MerchantRepo,
 ) {
     val log by LoggerDelegate()
 
+    /**
+     * клиент выбрал валюту
+     */
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
             val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitFirstOrNull()
@@ -41,20 +44,52 @@ class OrderService(
             invoice.status = InvoiceStatusType.PROCESSING
             invoiceRepo.updateStatus(invoice, trx.dsl()).awaitFirst()
 
+            val merchant = merchantRepo.findById(invoice.merchantId).awaitFirst()
+
+            val fromCurrency = currencyService.getById(invoice.currencyId)
+            val targetCurrency = currencyService.getByName(request.selectedCurrency)
+            val exchangeRate = exchangeRateService.getRate(fromCurrency, targetCurrency)
+
             val new = Order()
             new.status = OrderStatusType.NEW
             new.invoiceId = invoice.id
-            new.customerAmount = invoice.amount
-            new.customerAmountFact = invoice.amount
-            new.merchantAmountOrder = invoice.amount
-            new.merchantAmount = invoice.amount
-            new.referenceAmount = invoice.amount
-            new.exchangeRate = BigDecimal.ONE // TODO
-            new.selectedCurrencyId = currencyService.getByName(request.selectedCurrency).id
-            new.status = OrderStatusType.NEW
+            new.invoiceAmount = invoice.amount
+
+            // эталонная сумма сделки в валюте которую выбрал клиент, от которой идет расчет (invoice.amount -> exchange_rate[selected_currency_id])
+            new.referenceAmount = invoice.amount * exchangeRate
+            // сколько фактически пришло от клиента (может он отправил больше чем надо)
+            new.customerAmountFact = BigDecimal.ZERO
+
+            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+            when (invoice.commissionType) {
+                CommissionType.CLIENT -> {
+                    // сколько берем с клиента, он должен заплатить больше на сумму комиссии
+                    new.customerAmount = new.referenceAmount * (BigDecimal.ONE + merchant.commission.percentToMult())
+                    // сколько отдаем мерчанту в валюте сделки с учетом комиссий
+                    new.merchantAmountOrder = new.referenceAmount
+                    // сколько отдаем мерчанту в валюте invoice
+                    new.merchantAmount = invoice.amount
+                }
+
+                CommissionType.MERCHANT -> {
+                    // сколько берем с клиента, он должен ровно столько сколько заявлено
+                    new.customerAmount = new.referenceAmount
+                    // сколько отдаем мерчанту в валюте сделки с учетом комиссий
+                    new.merchantAmountOrder = new.referenceAmount * (BigDecimal.ONE - merchant.commission.percentToMult())
+                    // сколько отдаем мерчанту в валюте invoice - он получит меньше на сумму комиссии
+                    new.merchantAmount = invoice.amount * (BigDecimal.ONE - merchant.commission.percentToMult())
+                }
+            }
+
+            // сумма комиссии которую взимаем с мерчанта
+            new.merchantCommissionAmount = new.customerAmount - new.merchantAmountOrder
+            if (new.merchantCommissionAmount < BigDecimal.ZERO) {
+                throw ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Commission could not be negative")
+            }
+
+            new.exchangeRate = exchangeRate
+            new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
-            new.merchantCommission = BigDecimal.ZERO
-            new.systemCommission = BigDecimal.ZERO
 
             val save = orderRepo.save(new, trx.dsl()).awaitFirst()
 
