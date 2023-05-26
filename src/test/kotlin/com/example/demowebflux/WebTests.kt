@@ -5,11 +5,15 @@ import com.example.demowebflux.controller.dto.InvoiceRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.controller.dto.OrderResponseDTO
 import com.example.demowebflux.repo.InvoiceRepo
+import com.example.demowebflux.repo.MerchantRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.jooq.enums.CommissionType
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
+import com.example.jooq.tables.pojos.Merchant
+import com.github.javafaker.Faker
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
@@ -17,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
@@ -28,16 +33,21 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 
 @Testcontainers
 @AutoConfigureWebTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, useMainMethod = SpringBootTest.UseMainMethod.ALWAYS)
 class WebTests(
+    @Value("\${app.decimalScale}")
+    val decimalScale: Int
 //    @LocalServerPort
 //    val port: Int,
 ) {
-    private val merchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
+    private val faker = Faker()
+
+    private val defaultMerchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
 
     @Autowired
     private lateinit var dslContext: DSLContext
@@ -49,12 +59,14 @@ class WebTests(
     private lateinit var orderRepo: OrderRepo
 
     @Autowired
+    private lateinit var merchantRepo: MerchantRepo
+
+    @Autowired
     private lateinit var webClient: WebTestClient
 
     companion object {
         @Container
         private val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:14.7-alpine")
-            .withReuse(true)
 
         @DynamicPropertySource
         @JvmStatic
@@ -73,7 +85,7 @@ class WebTests(
     @Test
     fun testWrongInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
-            merchantId,
+            defaultMerchantId,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -92,7 +104,7 @@ class WebTests(
             .expectStatus().isBadRequest
 
         val invoiceRequest2 = InvoiceRequestDTO(
-            merchantId,
+            defaultMerchantId,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -111,7 +123,7 @@ class WebTests(
             .expectStatus().isBadRequest
 
         val invoiceRequest3 = InvoiceRequestDTO(
-            merchantId,
+            defaultMerchantId,
             "some_customer_id",
             "order#1",
             "TRX",
@@ -133,7 +145,7 @@ class WebTests(
     @Test
     fun testCreateInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
-            merchantId,
+            defaultMerchantId,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -195,17 +207,23 @@ class WebTests(
         return response
     }
 
-    fun createOrderWithNumber(num: Int): OrderResponseDTO {
+    fun createOrderWithNumber(
+        merchantId: UUID,
+        num: Int,
+        sum: BigDecimal = BigDecimal(100),
+        commissionType: CommissionType = CommissionType.CLIENT,
+        selectedCurrency: String = "USDT-TRC20-NILE"
+    ): OrderResponseDTO {
         val invoiceRequest = InvoiceRequestDTO(
             merchantId,
             "some_customer_id",
             "order#$num",
             "USDT-TRC20-NILE",
-            BigDecimal(100),
+            sum,
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
+            commissionType
         )
 
         // создаем инвойс
@@ -217,7 +235,7 @@ class WebTests(
         }
 
         val request = CreateOrderRequestDTO(
-            invoiceResponse.id, "USDT-TRC20-NILE"
+            invoiceResponse.id, selectedCurrency
         )
         val response = createOrder(request)
         assertNotNull(response)
@@ -231,14 +249,90 @@ class WebTests(
         return response
     }
 
+    suspend fun createMerchant(commission: BigDecimal): Merchant {
+        return merchantRepo.save(
+            Merchant()
+                .setCommission(commission)
+                .setLogin(faker.name().username())
+                .setEmail(faker.internet().emailAddress()),
+            dslContext
+        ).awaitSingle()
+    }
+
     @Test
     fun testCreateOrder() {
         // #1 занят другим тестом
-        val response = createOrderWithNumber(2)
+        val response = createOrderWithNumber(defaultMerchantId, 2)
         runBlocking {
             val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)
             assertEquals(order?.status, OrderStatusType.NEW)
+        }
+    }
+
+
+    /**
+     * тест расчета суммы когда комиссию платит клиент
+     */
+    @Test
+    fun testOrderCalcClientCommission() {
+        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.FLOOR)
+        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.FLOOR)
+
+        runBlocking {
+            val merch = createMerchant(commission)
+
+            val response = createOrderWithNumber(merch.id, 3, sum, CommissionType.CLIENT)
+
+            val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
+            assertNotNull(order)
+
+            if (order != null) {
+                assertEquals(order.invoiceAmount.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.referenceAmount.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.merchantAmountOrder.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.merchantAmount.stripTrailingZeros().toPlainString(), "1353.465")
+
+                // клиент заплатит комиссию
+                assertEquals(order.customerAmount.stripTrailingZeros().toPlainString(), "1403.001819")
+                // и ее размер
+                assertEquals(order.commissionAmount.stripTrailingZeros().toPlainString(), "49.536819")
+
+                assertEquals(order.exchangeRate.stripTrailingZeros().toPlainString(), "1")
+                assertEquals(order.commission.stripTrailingZeros().toPlainString(), "3.66")
+            }
+        }
+    }
+
+    @Test
+    fun testOrderCalcMerchantCommission() {
+        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.FLOOR)
+        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.FLOOR)
+
+        runBlocking {
+            val merch = createMerchant(commission)
+            println(merch)
+
+            val response = createOrderWithNumber(merch.id, 3, sum, CommissionType.MERCHANT)
+
+            val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
+            assertNotNull(order)
+
+            if (order != null) {
+                assertEquals(order.invoiceAmount.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.referenceAmount.stripTrailingZeros().toPlainString(), "1353.465")
+
+                // мерчант заплатит комиссию. а значит получит меньше
+                assertEquals(order.merchantAmountOrder.stripTrailingZeros().toPlainString(), "1303.928181")
+                assertEquals(order.merchantAmount.stripTrailingZeros().toPlainString(), "1303.928181")
+
+                assertEquals(order.customerAmount.stripTrailingZeros().toPlainString(), "1353.465")
+                // и ее размер
+                assertEquals(order.commissionAmount.stripTrailingZeros().toPlainString(), "49.536819")
+
+                assertEquals(order.exchangeRate.stripTrailingZeros().toPlainString(), "1")
+                assertEquals(order.commission.stripTrailingZeros().toPlainString(), "3.66")
+            }
         }
     }
 

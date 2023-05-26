@@ -12,6 +12,8 @@ class ExchangeRateService(
     private val decimalScale: Int
 ) {
     fun getRate(from: Currency, to: Currency): BigDecimal {
+        if (from.id == to.id) return BigDecimal.ONE
+
         // TODO
         return BigDecimal("2.452").setScale(decimalScale, RoundingMode.FLOOR)
 //        return BigDecimal.ONE

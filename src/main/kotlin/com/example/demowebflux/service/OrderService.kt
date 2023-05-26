@@ -2,7 +2,6 @@ package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.repo.InvoiceRepo
-import com.example.demowebflux.repo.MerchantRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.demowebflux.util.percentToMult
@@ -26,7 +25,7 @@ class OrderService(
     private val orderRepo: OrderRepo,
     private val dslContext: DSLContext,
     private val exchangeRateService: ExchangeRateService,
-    private val merchantRepo: MerchantRepo,
+    private val merchantService: MerchantService,
 ) {
     val log by LoggerDelegate()
 
@@ -44,7 +43,7 @@ class OrderService(
             invoice.status = InvoiceStatusType.PROCESSING
             invoiceRepo.updateStatus(invoice, trx.dsl()).awaitFirst()
 
-            val merchant = merchantRepo.findById(invoice.merchantId).awaitFirst()
+            val merchant = merchantService.getById(invoice.merchantId, trx.dsl())
 
             val fromCurrency = currencyService.getById(invoice.currencyId)
             val targetCurrency = currencyService.getByName(request.selectedCurrency)
@@ -59,6 +58,7 @@ class OrderService(
             new.referenceAmount = invoice.amount * exchangeRate
             // сколько фактически пришло от клиента (может он отправил больше чем надо)
             new.customerAmountFact = BigDecimal.ZERO
+            new.commission = merchant.commission
 
             @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
             when (invoice.commissionType) {
@@ -82,8 +82,8 @@ class OrderService(
             }
 
             // сумма комиссии которую взимаем с мерчанта
-            new.merchantCommissionAmount = new.customerAmount - new.merchantAmountOrder
-            if (new.merchantCommissionAmount < BigDecimal.ZERO) {
+            new.commissionAmount = new.customerAmount - new.merchantAmountOrder
+            if (new.commissionAmount < BigDecimal.ZERO) {
                 throw ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Commission could not be negative")
             }
 

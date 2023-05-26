@@ -9,9 +9,7 @@ import reactor.kotlin.core.publisher.toMono
 import java.util.*
 
 @Repository
-class InvoiceRepo(
-    private val dslContext: DSLContext
-) {
+class InvoiceRepo {
     fun findById(id: UUID, context: DSLContext): Mono<Invoice> {
         return context.selectFrom(INVOICE)
             .where(INVOICE.ID.eq(id))
@@ -28,9 +26,9 @@ class InvoiceRepo(
             .map(::Invoice)
     }
 
-    fun save(entity: Invoice): Mono<Invoice> {
-        return dslContext.insertInto(INVOICE)
-            .set(dslContext.newRecord(INVOICE, entity))
+    fun save(entity: Invoice, context: DSLContext): Mono<Invoice> {
+        return context.insertInto(INVOICE)
+            .set(context.newRecord(INVOICE, entity))
             .returning()
             .toMono()
             .map(::Invoice)

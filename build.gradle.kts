@@ -47,6 +47,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
     testImplementation("org.testcontainers:postgresql:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
     testImplementation("org.testcontainers:junit-jupiter:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers
+    testImplementation("com.github.javafaker:javafaker:1.0.2") // https://github.com/DiUS/java-faker
 }
 
 tasks.withType<KotlinCompile> {

@@ -9,10 +9,18 @@ import reactor.kotlin.core.publisher.toMono
 import java.util.*
 
 @Repository
-class MerchantRepo(private val dslContext: DSLContext) {
-    fun findById(id: UUID): Mono<Merchant> {
-        return dslContext.selectFrom(MERCHANT)
+class MerchantRepo {
+    fun findById(id: UUID, context: DSLContext): Mono<Merchant> {
+        return context.selectFrom(MERCHANT)
             .where(MERCHANT.ID.eq(id))
+            .toMono()
+            .map(::Merchant)
+    }
+
+    fun save(entity: Merchant, context: DSLContext): Mono<Merchant> {
+        return context.insertInto(MERCHANT)
+            .set(context.newRecord(MERCHANT, entity))
+            .returning()
             .toMono()
             .map(::Merchant)
     }
