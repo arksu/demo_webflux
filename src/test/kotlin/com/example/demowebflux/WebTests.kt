@@ -311,9 +311,8 @@ class WebTests(
 
         runBlocking {
             val merch = createMerchant(commission)
-            println(merch)
 
-            val response = createOrderWithNumber(merch.id, 3, sum, CommissionType.MERCHANT)
+            val response = createOrderWithNumber(merch.id, 4, sum, CommissionType.MERCHANT)
 
             val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)

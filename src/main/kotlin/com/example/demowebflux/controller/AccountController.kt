@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 import java.util.*
 
 @RestController
-@RequestMapping("/account")
+@RequestMapping("account")
 class AccountController(
     val accountService: AccountService,
 ) {

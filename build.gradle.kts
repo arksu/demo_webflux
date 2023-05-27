@@ -42,6 +42,12 @@ dependencies {
     runtimeOnly("org.postgresql:r2dbc-postgresql")
     runtimeOnly("io.r2dbc:r2dbc-pool")
 
+    runtimeOnly(
+        group = "io.netty",
+        name = "netty-resolver-dns-native-macos",
+        classifier = "osx-aarch_64"
+    )
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.testcontainers:testcontainers:1.18.1") // https://mvnrepository.com/artifact/org.testcontainers/testcontainers

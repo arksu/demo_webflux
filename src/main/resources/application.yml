@@ -12,8 +12,8 @@ spring:
   r2dbc:
     pool:
       enabled: true
-      initial-size: 20
-      max-size: 20
+      initial-size: 50
+      max-size: 50
       max-idle-time: 120s
     url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}
     username: ${DB_USER:postgres}
@@ -22,7 +22,7 @@ spring:
 logging:
   level:
     root: info
-    com.example: info
+    com.example: debug
 
 app:
   decimalScale: 8 # до скольки знаков после запятой округляем значения

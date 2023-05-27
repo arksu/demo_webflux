@@ -20,7 +20,6 @@ class AccountService(
     }
 
     suspend fun getSuspend(id: UUID): AccountResponseDTO {
-//        delay(2000)
         return accountRepo.findById(id).awaitSingle().let {
             AccountResponseDTO(it.id, it.name)
         }

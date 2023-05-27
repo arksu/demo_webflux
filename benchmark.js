@@ -1,5 +1,5 @@
 import http from "k6/http";
-import {check, sleep} from "k6";
+import {check} from "k6";
 
 // Test configuration
 export const options = {
@@ -9,8 +9,8 @@ export const options = {
     },
     // Ramp the number of virtual users up and down
     stages: [
-        {duration: "4s", target: 100},
-        {duration: "20s", target: 100},
+        {duration: "4s", target: 1000},
+        {duration: "20s", target: 1000},
         {duration: "4s", target: 0},
     ],
 };
@@ -65,10 +65,35 @@ function createOrder(invoiceId) {
     });
 }
 
+function debug_delay() {
+    let res = http.get("http://localhost:8046/debug/delay");
+
+    // Validate response status
+    check(res, {
+        "debug_delay status was 200": (r) => {
+            return r.status === 200
+        }
+    });
+}
+
+function debug_delay2() {
+    let res = http.get("http://localhost:8046/debug/delay2");
+
+    // Validate response status
+    check(res, {
+        "debug_delay status was 200": (r) => {
+            return r.status === 200
+        }
+    });
+}
+
 // Simulated user behavior
 export default function () {
     // let invoiceId = createInvoice()
     // sleep(0.2);
     // createOrder(invoiceId)
-    createOrder("13bcbbe2-c82c-410d-8057-44c219a0a04e")
+    // createOrder("13bcbbe2-c82c-410d-8057-44c219a0a04e")
+
+    debug_delay()
+    // debug_delay2()
 }
