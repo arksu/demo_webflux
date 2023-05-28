@@ -1,6 +1,7 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
+import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
@@ -10,7 +11,7 @@ import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 import org.springframework.http.HttpStatus
@@ -26,15 +27,16 @@ class OrderService(
     private val dslContext: DSLContext,
     private val exchangeRateService: ExchangeRateService,
     private val merchantService: MerchantService,
+    private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
 ) {
     val log by LoggerDelegate()
 
     /**
-     * клиент выбрал валюту
+     * клиент выбрал валюту, запускаем сделку, выбираем кошелек под эту валюту
      */
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
-            val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitFirstOrNull()
+            val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
                 ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
 
             if (invoice.status != InvoiceStatusType.NEW) {
@@ -49,10 +51,21 @@ class OrderService(
             val targetCurrency = currencyService.getByName(request.selectedCurrency)
             val exchangeRate = exchangeRateService.getRate(fromCurrency, targetCurrency)
 
+            // ищем свободные кошельки на которые можем принять
+            val freeWallets = blockchainIncomeWalletRepo.findByCurrencyAndFree(targetCurrency.id, trx.dsl()).awaitSingleOrNull()?.shuffled()
+                ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "No free wallet now")
+
+            if (freeWallets.isEmpty()) {
+                throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "No free wallet now")
+            }
+            // берем первый из перемешанного списка свободных кошельков
+            val wallet = freeWallets[0]
+
             val new = Order()
             new.status = OrderStatusType.NEW
             new.invoiceId = invoice.id
             new.invoiceAmount = invoice.amount
+            new.incomeWalletId = wallet.id
 
             // эталонная сумма сделки в валюте которую выбрал клиент, от которой идет расчет (invoice.amount -> exchange_rate[selected_currency_id])
             new.referenceAmount = invoice.amount * exchangeRate
@@ -60,7 +73,7 @@ class OrderService(
             new.customerAmountFact = BigDecimal.ZERO
             new.commission = merchant.commission
 
-            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA") // DDL
             when (invoice.commissionType) {
                 CommissionType.CLIENT -> {
                     // сколько берем с клиента, он должен заплатить больше на сумму комиссии

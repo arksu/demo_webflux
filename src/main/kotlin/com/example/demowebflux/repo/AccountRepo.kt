@@ -1,5 +1,6 @@
 package com.example.demowebflux.repo
 
+import com.example.demowebflux.util.toFlux
 import com.example.jooq.Tables.ACCOUNT
 import com.example.jooq.tables.pojos.Account
 import org.jooq.DSLContext
@@ -23,10 +24,10 @@ class AccountRepo(
     }
 
     fun findAll(): Flux<Account> {
-        return Flux.from(
-            dslContext.selectFrom(ACCOUNT)
-                .where(ACCOUNT.ID.isNotNull)
-        ).map(::Account)
+        return dslContext.selectFrom(ACCOUNT)
+            .where(ACCOUNT.ID.isNotNull)
+            .toFlux()
+            .map(::Account)
     }
 
     fun add(name: String, ctx: DSLContext): Mono<Account> {
@@ -36,6 +37,5 @@ class AccountRepo(
             .returning()
             .toMono()
             .map(::Account)
-
     }
 }

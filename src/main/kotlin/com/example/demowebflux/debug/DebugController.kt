@@ -1,11 +1,8 @@
 package com.example.demowebflux.debug
 
-import com.example.demowebflux.repo.AccountRepo
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.jooq.Tables.ACCOUNT
 import com.example.jooq.tables.records.AccountRecord
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitSingle
 import org.jooq.DSLContext
 import org.springframework.core.ParameterizedTypeReference
@@ -18,7 +15,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
-import java.time.Duration
 import java.util.*
 
 @RestController

@@ -1,21 +1,24 @@
 create schema if not exists demo_webflux;
 
+create type blockchain_type as enum ('TRON', 'TRON-NILE', 'ETH');
+
 create table if not exists currency
 (
     id           int generated always as identity primary key,
-    name         varchar(32) not null,
-    display_name varchar(64) not null,
+    name         varchar(32)     not null,
+    blockchain   blockchain_type not null,
+    display_name varchar(64)     not null,
     enabled      bool default true
 );
 
-insert into currency (name, display_name, enabled)
-values ('USDT-TRC20', 'Tether TRC-20', true),
-       ('USDT-TRC20-NILE', 'TEST Nile Tether TRC-20', true),
-       ('USDD-TRC20-NILE', 'TEST Nile USDD TRC-20', true),
-       ('TRX-NILE', 'TEST Nile Tron', true),
-       ('USDT-ERC20', 'Tether ERC-20', false),
-       ('ETH', 'Ethereum', false),
-       ('TRX', 'Tron', false);
+insert into currency (name, blockchain, display_name, enabled)
+values ('USDT-TRC20', 'TRON', 'Tether TRC-20', false),
+       ('TRX', 'TRON', 'Tron', false),
+       ('USDT-TRC20-NILE', 'TRON-NILE', 'TEST Nile Tether TRC-20', true),
+       ('USDD-TRC20-NILE', 'TRON-NILE', 'TEST Nile USDD TRC-20', true),
+       ('TRX-NILE', 'TRON-NILE', 'TEST Nile Tron', true),
+       ('USDT-ERC20', 'ETH', 'Tether ERC-20', false),
+       ('ETH', 'ETH', 'Ethereum', false);
 
 create table if not exists merchant
 (
@@ -83,23 +86,30 @@ create table if not exists "order"
     exchange_rate         decimal                  not null check ( exchange_rate > 0 ),
     -- какую валюту выбрал пользователь для оплаты счета
     selected_currency_id  int                      null references currency (id),
-    -- количество подтверждений сети при проведении транзакции
-    confirmations         int                      not null check ( confirmations >= 0 ),
     -- сумма комиссии которую взимаем с мерчанта
     commission_amount     decimal                  not null check ( commission_amount >= 0 ),
     -- комиссия мерчанта на момент создания сделки (%)
     commission            decimal                  not null check (commission >= 0 ),
+    -- количество подтверждений сети при проведении транзакции
+    confirmations         int                      not null check ( confirmations >= 0 ),
+    -- кошелек на который принимаем
+    income_wallet_id      uuid                     not null,
     created               timestamp with time zone not null default now()
 );
 
-create type wallet_type as enum ('TRON', 'ETH');
+-- пул кошельков на который будем принимать средства от клиента
 create table if not exists blockchain_income_wallet
 (
-    address        varchar(512)             not null primary key,
-    type           wallet_type              not null,
-    network        varchar(255)             not null,
-    is_wait_income bool                     not null default false,
-    updated        timestamp with time zone not null default now()
+    id          uuid                              default gen_random_uuid() not null primary key,
+    -- блокчейн адрес
+    address     varchar(512)             not null,
+    -- валюта которую принимаем
+    currency_id int                      not null references currency (id),
+    -- кошелек занят приемом? ожидаем на него поступления средств
+    is_busy     bool                     not null default false,
+    updated     timestamp with time zone not null default now(),
+    -- на одном адресе не может быть несколько валют
+    unique (address, currency_id)
 );
 
 -- test data
