@@ -1,15 +1,18 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.exception.CurrencyNotFoundException
 import com.example.demowebflux.repo.CurrencyRepo
 import com.example.jooq.tables.pojos.Currency
 import jakarta.annotation.PostConstruct
+import org.jooq.DSLContext
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 
 @Service
 class CurrencyService(
-    private val currencyRepo: CurrencyRepo
+    private val currencyRepo: CurrencyRepo,
+    private val dslContext: DSLContext,
 ) {
     val mapByName = HashMap<String, Currency>()
     val mapById = HashMap<Int, Currency>()
@@ -22,7 +25,7 @@ class CurrencyService(
     fun reload() {
         // TODO !!! блокировка получения значений на время релоада
         mapByName.clear()
-        currencyRepo.loadAll().doOnNext {
+        currencyRepo.loadAll(dslContext).doOnNext {
             mapByName[it.name] = it
             mapById[it.id] = it
         }.subscribe()
@@ -35,7 +38,7 @@ class CurrencyService(
     fun getByName(name: String): Currency {
         // TODO: воткнуть блокировку во время ожидания reload (асинхронно)
         val currency = mapByName[name]
-        if (currency?.enabled == false) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
-        return currency ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
+        if (currency?.enabled == false) throw CurrencyNotFoundException(name)
+        return currency ?: throw CurrencyNotFoundException(name)
     }
 }

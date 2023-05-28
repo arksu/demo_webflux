@@ -2,6 +2,8 @@ server:
   port: 8046
 
 spring:
+  application:
+    name: crypt-gate
   flyway:
     schemas: demo_webflux
     placeholder-replacement: true

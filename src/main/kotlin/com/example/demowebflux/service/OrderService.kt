@@ -11,6 +11,7 @@ import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
 import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
@@ -73,7 +74,7 @@ class OrderService(
             new.customerAmountFact = BigDecimal.ZERO
             new.commission = merchant.commission
 
-            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA") // DDL
+            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA") // DDL: commissionType not null
             when (invoice.commissionType) {
                 CommissionType.CLIENT -> {
                     // сколько берем с клиента, он должен заплатить больше на сумму комиссии
@@ -104,7 +105,7 @@ class OrderService(
             new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
 
-            val save = orderRepo.save(new, trx.dsl()).awaitFirst()
+            val save = orderRepo.save(new, trx.dsl()).awaitSingle()
 
             save
         }

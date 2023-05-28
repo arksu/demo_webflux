@@ -24,6 +24,8 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("io.github.wimdeblauwe:error-handling-spring-boot-starter:4.1.0")
+
     implementation("org.springframework:spring-jdbc")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 

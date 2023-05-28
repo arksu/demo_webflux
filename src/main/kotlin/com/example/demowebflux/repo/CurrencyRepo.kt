@@ -8,11 +8,9 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 
 @Repository
-class CurrencyRepo(
-    private val dslContext: DSLContext
-) {
-    fun loadAll(): Flux<Currency> {
-        return dslContext.selectFrom(CURRENCY)
+class CurrencyRepo {
+    fun loadAll(context: DSLContext): Flux<Currency> {
+        return context.selectFrom(CURRENCY)
             .toFlux()
             .map(::Currency)
     }
