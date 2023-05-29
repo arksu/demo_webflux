@@ -15,9 +15,8 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
     override val idField = BLOCKCHAIN_INCOME_WALLET.ID
     override val mapper = { it: BlockchainIncomeWalletRecord -> BlockchainIncomeWallet(it) }
 
-
-    fun findByCurrencyAndFree(currencyId: Int, dslContext: DSLContext): Mono<List<BlockchainIncomeWallet>> {
-        return dslContext.selectFrom(BLOCKCHAIN_INCOME_WALLET)
+    fun findByCurrencyAndFree(currencyId: Int, context: DSLContext): Mono<List<BlockchainIncomeWallet>> {
+        return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
             .where(BLOCKCHAIN_INCOME_WALLET.CURRENCY_ID.eq(currencyId))
             .and(BLOCKCHAIN_INCOME_WALLET.IS_BUSY.isFalse)
             .limit(100)
@@ -26,5 +25,14 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
             .toFlux()
             .map(::BlockchainIncomeWallet)
             .collectList()
+    }
+
+    fun updateIsBusy(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {
+        return context.update(BLOCKCHAIN_INCOME_WALLET)
+            .set(BLOCKCHAIN_INCOME_WALLET.IS_BUSY, entity.isBusy)
+            .where(BLOCKCHAIN_INCOME_WALLET.ID.eq(entity.id))
+            .returning()
+            .toMonoAndMap()
+
     }
 }

@@ -14,7 +14,7 @@ spring:
   r2dbc:
     pool:
       enabled: true
-      initial-size: 50
+      initial-size: 5
       max-size: 50
       max-idle-time: 120s
     url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5400}/${DB_NAME:demo_webflux}

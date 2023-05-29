@@ -20,8 +20,7 @@ class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>() {
             .where(INVOICE.ID.eq(id))
             .forUpdate()
             .skipLocked()
-            .toMono()
-            .map(::Invoice)
+            .toMonoAndMap()
     }
 
     fun updateStatus(invoice: Invoice, context: DSLContext): Mono<Int> {

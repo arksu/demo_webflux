@@ -11,5 +11,4 @@ class OrderRepo : AbstractCrudRepo<UUID, Order, OrderRecord>() {
     override val table = ORDER
     override val idField = ORDER.ID
     override val mapper = { it: OrderRecord -> Order(it) }
-
 }

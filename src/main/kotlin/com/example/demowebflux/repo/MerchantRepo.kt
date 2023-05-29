@@ -11,5 +11,4 @@ class MerchantRepo : AbstractCrudRepo<UUID, Merchant, MerchantRecord>() {
     override val table = MERCHANT
     override val idField = MERCHANT.ID
     override val mapper = { it: MerchantRecord -> Merchant(it) }
-
 }

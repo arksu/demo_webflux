@@ -1,9 +1,6 @@
 package com.example.demowebflux.repo
 
-import org.jooq.DSLContext
-import org.jooq.Field
-import org.jooq.Table
-import org.jooq.UpdatableRecord
+import org.jooq.*
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 
@@ -25,5 +22,9 @@ abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
             .returning()
             .toMono()
             .map(mapper)
+    }
+
+    fun ResultQuery<R>.toMonoAndMap() : Mono<T> {
+        return Mono.from(this).map(mapper)
     }
 }

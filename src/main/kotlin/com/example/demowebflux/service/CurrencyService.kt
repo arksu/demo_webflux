@@ -5,9 +5,7 @@ import com.example.demowebflux.repo.CurrencyRepo
 import com.example.jooq.tables.pojos.Currency
 import jakarta.annotation.PostConstruct
 import org.jooq.DSLContext
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 
 @Service
 class CurrencyService(
@@ -32,7 +30,7 @@ class CurrencyService(
     }
 
     fun getById(id: Int): Currency {
-        return mapById[id] ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency not found")
+        return mapById[id] ?: throw CurrencyNotFoundException()
     }
 
     fun getByName(name: String): Currency {

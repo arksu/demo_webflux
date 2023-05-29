@@ -1,6 +1,9 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
+import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
+import com.example.demowebflux.exception.NoFreeWalletException
+import com.example.demowebflux.exception.UnprocessableEntityException
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderRepo
@@ -15,9 +18,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.math.BigDecimal
 
 @Service
@@ -38,10 +39,10 @@ class OrderService(
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
             val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
-                ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Invoice is not found or locked")
+                ?: throw InvoiceNotFoundOrLockedException(request.invoiceId)
 
             if (invoice.status != InvoiceStatusType.NEW) {
-                throw ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Wrong invoice status")
+                throw UnprocessableEntityException("Wrong invoice status")
             }
             invoice.status = InvoiceStatusType.PROCESSING
             invoiceRepo.updateStatus(invoice, trx.dsl()).awaitFirst()
@@ -54,13 +55,15 @@ class OrderService(
 
             // ищем свободные кошельки на которые можем принять
             val freeWallets = blockchainIncomeWalletRepo.findByCurrencyAndFree(targetCurrency.id, trx.dsl()).awaitSingleOrNull()?.shuffled()
-                ?: throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "No free wallet now")
+                ?: throw NoFreeWalletException()
 
             if (freeWallets.isEmpty()) {
-                throw ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "No free wallet now")
+                throw NoFreeWalletException()
             }
             // берем первый из перемешанного списка свободных кошельков
             val wallet = freeWallets[0]
+            wallet.isBusy = true
+            blockchainIncomeWalletRepo.updateIsBusy(wallet, trx.dsl()).awaitSingle()
 
             val new = Order()
             new.status = OrderStatusType.NEW
@@ -98,7 +101,7 @@ class OrderService(
             // сумма комиссии которую взимаем с мерчанта
             new.commissionAmount = new.customerAmount - new.merchantAmountOrder
             if (new.commissionAmount < BigDecimal.ZERO) {
-                throw ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Commission could not be negative")
+                throw UnprocessableEntityException("Commission could not be negative")
             }
 
             new.exchangeRate = exchangeRate
