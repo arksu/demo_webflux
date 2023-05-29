@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository
 import java.util.*
 
 @Repository
-class OrderRepo : AbstractCrudRepo<UUID, Order, OrderRecord>(
-    ORDER, ORDER.ID, ::Order
-)
+class OrderRepo : AbstractCrudRepo<UUID, Order, OrderRecord>() {
+    override val table = ORDER
+    override val idField = ORDER.ID
+    override val mapper = { it: OrderRecord -> Order(it) }
+
+}

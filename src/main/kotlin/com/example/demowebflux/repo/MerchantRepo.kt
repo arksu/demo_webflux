@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository
 import java.util.*
 
 @Repository
-class MerchantRepo : AbstractCrudRepo<UUID, Merchant, MerchantRecord>(
-    MERCHANT, MERCHANT.ID, ::Merchant
-)
+class MerchantRepo : AbstractCrudRepo<UUID, Merchant, MerchantRecord>() {
+    override val table = MERCHANT
+    override val idField = MERCHANT.ID
+    override val mapper = { it: MerchantRecord -> Merchant(it) }
+
+}

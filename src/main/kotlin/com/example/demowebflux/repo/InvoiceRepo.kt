@@ -10,9 +10,11 @@ import reactor.kotlin.core.publisher.toMono
 import java.util.*
 
 @Repository
-class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>(
-    INVOICE, INVOICE.ID, ::Invoice
-) {
+class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>() {
+    override val table = INVOICE
+    override val idField = INVOICE.ID
+    override val mapper = { it: InvoiceRecord -> Invoice(it) }
+
     fun findByIdForUpdateSkipLocked(id: UUID, context: DSLContext): Mono<Invoice> {
         return context.selectFrom(INVOICE)
             .where(INVOICE.ID.eq(id))
@@ -28,4 +30,5 @@ class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>(
             .where(INVOICE.ID.eq(invoice.id))
             .toMono()
     }
+
 }

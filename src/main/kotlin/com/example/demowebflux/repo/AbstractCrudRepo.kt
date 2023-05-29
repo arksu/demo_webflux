@@ -7,16 +7,16 @@ import org.jooq.UpdatableRecord
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 
-abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>>(
-    private val table: Table<R>,
-    private val idField: Field<ID>,
-    private val mapper: (R) -> T
-) {
+abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
+    abstract val table: Table<R>
+    abstract val idField: Field<ID>
+    abstract val mapper: (R) -> T
+
     fun findById(id: ID, context: DSLContext): Mono<T> {
         return context.selectFrom(table)
             .where(idField.eq(id))
             .toMono()
-            .map { mapper(it) }
+            .map(mapper)
     }
 
     fun save(entity: T, context: DSLContext): Mono<T> {
@@ -24,6 +24,6 @@ abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>>(
             .set(context.newRecord(table, entity))
             .returning()
             .toMono()
-            .map { mapper(it) }
+            .map(mapper)
     }
 }

@@ -10,9 +10,12 @@ import reactor.core.publisher.Mono
 import java.util.*
 
 @Repository
-class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet, BlockchainIncomeWalletRecord>(
-    BLOCKCHAIN_INCOME_WALLET, BLOCKCHAIN_INCOME_WALLET.ID, ::BlockchainIncomeWallet
-) {
+class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet, BlockchainIncomeWalletRecord>() {
+    override val table = BLOCKCHAIN_INCOME_WALLET
+    override val idField = BLOCKCHAIN_INCOME_WALLET.ID
+    override val mapper = { it: BlockchainIncomeWalletRecord -> BlockchainIncomeWallet(it) }
+
+
     fun findByCurrencyAndFree(currencyId: Int, dslContext: DSLContext): Mono<List<BlockchainIncomeWallet>> {
         return dslContext.selectFrom(BLOCKCHAIN_INCOME_WALLET)
             .where(BLOCKCHAIN_INCOME_WALLET.CURRENCY_ID.eq(currencyId))
