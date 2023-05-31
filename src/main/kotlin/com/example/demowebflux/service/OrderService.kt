@@ -108,9 +108,7 @@ class OrderService(
             new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
 
-            val save = orderRepo.save(new, trx.dsl()).awaitSingle()
-
-            save
+            orderRepo.save(new, trx.dsl()).awaitSingle()
         }
     }
 }
