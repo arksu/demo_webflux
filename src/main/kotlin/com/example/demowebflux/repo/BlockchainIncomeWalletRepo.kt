@@ -6,6 +6,7 @@ import com.example.jooq.tables.pojos.BlockchainIncomeWallet
 import com.example.jooq.tables.records.BlockchainIncomeWalletRecord
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.*
 
@@ -23,8 +24,18 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
             .forUpdate()
             .skipLocked()
             .toFlux()
-            .map(::BlockchainIncomeWallet)
+            .map(mapper)
             .collectList()
+    }
+
+    /**
+     * ищем кошельки занятые работой, по указанному списку валют
+     */
+    fun findIsBusy(currencies: List<Int>, context: DSLContext): Flux<BlockchainIncomeWallet> {
+        return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
+            .where(BLOCKCHAIN_INCOME_WALLET.IS_BUSY.isTrue)
+            .toFlux()
+            .map(mapper)
     }
 
     fun updateIsBusy(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {

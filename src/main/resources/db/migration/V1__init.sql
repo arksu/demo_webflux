@@ -1,6 +1,6 @@
 create schema if not exists demo_webflux;
 
-create type blockchain_type as enum ('TRON', 'TRON-NILE', 'ETH');
+create type blockchain_type as enum ('TRON', 'TRON-NILE', 'TRON-SHASTA', 'ETH');
 
 create table if not exists currency
 (
