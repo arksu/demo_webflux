@@ -254,7 +254,7 @@ class WebTests(
         val wallet = BlockchainIncomeWallet()
         wallet.address = UUID.randomUUID().toString()
         wallet.currencyId = currencyService.getByName(currencyName).id
-        wallet.isBusy = false
+        wallet.orderId = null
         return runBlocking {
             blockchainIncomeWalletRepo.save(wallet, dslContext).awaitSingle()
         }
@@ -303,8 +303,8 @@ class WebTests(
             assertEquals(order.status, OrderStatusType.NEW)
 
             // а также что наш кошелек заблокировался
-            val uwallet = blockchainIncomeWalletRepo.findById(wallet.id, dslContext).awaitSingle()
-            assertTrue(uwallet.isBusy)
+            val updatedWallet = blockchainIncomeWalletRepo.findById(wallet.id, dslContext).awaitSingle()
+            assertEquals(order.id, updatedWallet.orderId)
         }
 
         return response

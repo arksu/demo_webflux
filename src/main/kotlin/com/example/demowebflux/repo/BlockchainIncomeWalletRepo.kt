@@ -16,10 +16,10 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
     override val idField = BLOCKCHAIN_INCOME_WALLET.ID
     override val mapper = { it: BlockchainIncomeWalletRecord -> BlockchainIncomeWallet(it) }
 
-    fun findByCurrencyAndFree(currencyId: Int, context: DSLContext): Mono<List<BlockchainIncomeWallet>> {
+    fun findByCurrencyAndFreeForUpdateSkipLocked(currencyId: Int, context: DSLContext): Mono<List<BlockchainIncomeWallet>> {
         return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
             .where(BLOCKCHAIN_INCOME_WALLET.CURRENCY_ID.eq(currencyId))
-            .and(BLOCKCHAIN_INCOME_WALLET.IS_BUSY.isFalse)
+            .and(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.isNull)
             .limit(100)
             .forUpdate()
             .skipLocked()
@@ -33,14 +33,14 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
      */
     fun findIsBusy(currencies: List<Int>, context: DSLContext): Flux<BlockchainIncomeWallet> {
         return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
-            .where(BLOCKCHAIN_INCOME_WALLET.IS_BUSY.isTrue)
+            .where(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.isNotNull)
             .toFlux()
             .map(mapper)
     }
 
-    fun updateIsBusy(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {
+    fun updateOrderId(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {
         return context.update(BLOCKCHAIN_INCOME_WALLET)
-            .set(BLOCKCHAIN_INCOME_WALLET.IS_BUSY, entity.isBusy)
+            .set(BLOCKCHAIN_INCOME_WALLET.ORDER_ID, entity.orderId)
             .where(BLOCKCHAIN_INCOME_WALLET.ID.eq(entity.id))
             .returning()
             .toMonoAndMap()

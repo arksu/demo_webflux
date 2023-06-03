@@ -12,16 +12,14 @@ abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
     fun findById(id: ID, context: DSLContext): Mono<T> {
         return context.selectFrom(table)
             .where(idField.eq(id))
-            .toMono()
-            .map(mapper)
+            .toMonoAndMap()
     }
 
     fun save(entity: T, context: DSLContext): Mono<T> {
         return context.insertInto(table)
             .set(context.newRecord(table, entity))
             .returning()
-            .toMono()
-            .map(mapper)
+            .toMonoAndMap()
     }
 
     fun ResultQuery<R>.toMonoAndMap() : Mono<T> {

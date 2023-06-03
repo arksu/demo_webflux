@@ -110,8 +110,10 @@ create table if not exists blockchain_income_wallet
     address     varchar(512)             not null,
     -- валюта которую принимаем
     currency_id int                      not null references currency (id),
-    -- кошелек занят приемом? ожидаем на него поступления средств
-    is_busy     bool                     not null default false,
+    -- кошелек занят приемом? ожидаем на него поступления средств,
+    -- тогда впишем сюда ид заказа по которому ожидаем оплату на кошелек
+    -- null - если кошелек свободен
+    order_id    uuid                     null references "order" (id),
     updated     timestamp with time zone not null default now(),
     -- на одном адресе не может быть несколько валют
     unique (address, currency_id)

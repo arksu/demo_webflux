@@ -1,6 +1,5 @@
 package com.example.demowebflux.service
 
-import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.exception.CurrencyNotFoundException
 import com.example.demowebflux.repo.CurrencyRepo
 import com.example.jooq.enums.BlockchainType
@@ -25,6 +24,7 @@ class CurrencyService(
     }
 
     fun getById(id: Int): Currency {
+        // TODO !!! блокировка получения значений на время релоада
         return mapById[id] ?: throw CurrencyNotFoundException()
     }
 
@@ -54,7 +54,6 @@ class CurrencyService(
     fun getByName(name: String): Currency {
         // TODO: воткнуть блокировку во время ожидания reload (асинхронно)
         val currency = mapByName[name]
-        if (currency?.enabled == false) throw CurrencyNotFoundException(name)
         return currency ?: throw CurrencyNotFoundException(name)
     }
 

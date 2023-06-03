@@ -11,10 +11,9 @@ import java.util.*
 @Service
 class MerchantService(
     private val merchantRepo: MerchantRepo,
-    private val dslContext: DSLContext
 ) {
-    suspend fun getById(id: UUID, ctx: DSLContext? = null): Merchant {
-        val merchant = merchantRepo.findById(id, ctx ?: dslContext).awaitSingleOrNull() ?: throw MerchantNotFoundException(id)
+    suspend fun getById(id: UUID, context: DSLContext): Merchant {
+        val merchant = merchantRepo.findById(id, context).awaitSingleOrNull() ?: throw MerchantNotFoundException(id)
         if (!merchant.enabled) {
             throw MerchantNotFoundException(id)
         }
@@ -24,7 +23,7 @@ class MerchantService(
     /**
      * получить список валют которыми может платить клиент от конкретного мерчанта
      */
-    fun getPaymentAvailableCurrencies(merchantId: UUID): List<Int>? {
+    fun getPaymentAvailableCurrencies(merchant: Merchant): List<Int>? {
         return null
     }
 }

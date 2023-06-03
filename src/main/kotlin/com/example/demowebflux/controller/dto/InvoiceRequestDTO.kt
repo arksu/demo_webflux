@@ -3,6 +3,7 @@ package com.example.demowebflux.controller.dto
 import com.example.jooq.enums.CommissionType
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
+import org.springframework.validation.annotation.Validated
 import java.math.BigDecimal
 import java.util.*
 
@@ -10,7 +11,7 @@ data class InvoiceRequestDTO(
     val merchantId: UUID,
 
     @field:NotBlank
-    val apiKey : String,
+    val apiKey: String,
 
     /**
      * ид клиента в системе мерчанта

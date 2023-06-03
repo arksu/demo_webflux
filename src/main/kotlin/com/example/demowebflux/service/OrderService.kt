@@ -1,6 +1,7 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
+import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.exception.NoFreeWalletException
 import com.example.demowebflux.exception.UnprocessableEntityException
@@ -37,6 +38,8 @@ class OrderService(
      * клиент выбрал валюту, запускаем сделку, выбираем кошелек под эту валюту
      */
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
+        val targetCurrency = currencyService.getByName(request.selectedCurrency)
+
         return dslContext.transactionCoroutine { trx ->
             val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
                 ?: throw InvoiceNotFoundOrLockedException(request.invoiceId.toString())
@@ -48,22 +51,22 @@ class OrderService(
             invoiceRepo.updateStatus(invoice, trx.dsl()).awaitFirst()
 
             val merchant = merchantService.getById(invoice.merchantId, trx.dsl())
-
             val fromCurrency = currencyService.getById(invoice.currencyId)
-            val targetCurrency = currencyService.getByName(request.selectedCurrency)
-            val exchangeRate = exchangeRateService.getRate(fromCurrency, targetCurrency)
 
             // ищем свободные кошельки на которые можем принять
-            val freeWallets = blockchainIncomeWalletRepo.findByCurrencyAndFree(targetCurrency.id, trx.dsl()).awaitSingleOrNull()?.shuffled()
+            val freeWallets = blockchainIncomeWalletRepo
+                .findByCurrencyAndFreeForUpdateSkipLocked(targetCurrency.id, trx.dsl())
+                .awaitSingleOrNull()
                 ?: throw NoFreeWalletException()
 
             if (freeWallets.isEmpty()) {
                 throw NoFreeWalletException()
             }
             // берем первый из перемешанного списка свободных кошельков
-            val wallet = freeWallets[0]
-            wallet.isBusy = true
-            blockchainIncomeWalletRepo.updateIsBusy(wallet, trx.dsl()).awaitSingle()
+            val wallet = freeWallets.shuffled()[0]
+
+            val exchangeRate = exchangeRateService.getRate(fromCurrency, targetCurrency)
+                ?: throw BadRequestException("Incorrect selected currency, try other")
 
             val new = Order()
             new.status = OrderStatusType.NEW
@@ -108,7 +111,12 @@ class OrderService(
             new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
 
-            orderRepo.save(new, trx.dsl()).awaitSingle()
+            val saved = orderRepo.save(new, trx.dsl()).awaitSingle()
+
+            // занимаем кошелек
+            wallet.orderId = saved.id
+            blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
+            saved
         }
     }
 }
