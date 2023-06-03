@@ -20,4 +20,11 @@ class MerchantService(
         }
         return merchant
     }
+
+    /**
+     * получить список валют которыми может платить клиент от конкретного мерчанта
+     */
+    fun getPaymentAvailableCurrencies(merchantId: UUID): List<Int>? {
+        return null
+    }
 }

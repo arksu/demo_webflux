@@ -9,6 +9,7 @@ import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.MerchantRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.service.CurrencyService
+import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.CommissionType
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
@@ -50,6 +51,7 @@ class WebTests(
     private val faker = Faker()
 
     private val defaultMerchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
+    private val defaultApiKey = "XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ"
 
     private val defaultCurrency = "USDT-TRC20-NILE"
 
@@ -94,8 +96,10 @@ class WebTests(
 
     @Test
     fun testWrongInvoice() {
+        // сумма 0
         val invoiceRequest = InvoiceRequestDTO(
             defaultMerchantId,
+            defaultApiKey,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -113,8 +117,10 @@ class WebTests(
             .exchange()
             .expectStatus().isBadRequest
 
+        // сумма
         val invoiceRequest2 = InvoiceRequestDTO(
             defaultMerchantId,
+            defaultApiKey,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -132,12 +138,14 @@ class WebTests(
             .exchange()
             .expectStatus().isBadRequest
 
+        // валюта
         val invoiceRequest3 = InvoiceRequestDTO(
             defaultMerchantId,
+            defaultApiKey,
             "some_customer_id",
             "order#1",
-            "TRX",
-            BigDecimal(-1),
+            "TRX2",
+            BigDecimal(100),
             null,
             "https://google.com",
             "https://google.com/fail",
@@ -153,9 +161,34 @@ class WebTests(
     }
 
     @Test
+    fun testCreateWrongApiKeyInvoice() {
+        val invoiceRequest = InvoiceRequestDTO(
+            defaultMerchantId,
+            "123123",
+            "some_customer_id",
+            "order#112",
+            "USDT-TRC20-NILE",
+            BigDecimal(100),
+            null,
+            "https://google.com",
+            "https://google.com/fail",
+            CommissionType.CLIENT
+        )
+
+        // создаем инвойс
+        webClient.post()
+            .uri("/invoice")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(invoiceRequest))
+            .exchange()
+            .expectStatus().isBadRequest
+    }
+
+    @Test
     fun testCreateInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
             defaultMerchantId,
+            defaultApiKey,
             "some_customer_id",
             "order#1",
             "USDT-TRC20-NILE",
@@ -171,7 +204,7 @@ class WebTests(
 
         runBlocking {
             // прочитаем его из базы. он там должен быть
-            val invoice = invoiceRepo.findById(response.id, dslContext).awaitSingleOrNull()
+            val invoice = invoiceRepo.findByExternalId(response.id, dslContext).awaitSingleOrNull()
             assertNotNull(invoice)
             assertEquals(invoice?.customerId, "some_customer_id")
         }
@@ -229,6 +262,7 @@ class WebTests(
 
     fun createOrderWithNumber(
         merchantId: UUID,
+        apiKey: String,
         num: Int,
         sum: BigDecimal = BigDecimal(100),
         commissionType: CommissionType = CommissionType.CLIENT,
@@ -238,6 +272,7 @@ class WebTests(
 
         val invoiceRequest = InvoiceRequestDTO(
             merchantId,
+            apiKey,
             "some_customer_id",
             "order#$num",
             defaultCurrency,
@@ -251,7 +286,7 @@ class WebTests(
         // создаем инвойс
         val invoiceResponse = createInvoice(invoiceRequest)
         runBlocking {
-            val invoice = invoiceRepo.findById(invoiceResponse.id, dslContext).awaitSingle()
+            val invoice = invoiceRepo.findByExternalId(invoiceResponse.id, dslContext).awaitSingle()
             assertNotNull(invoice)
             assertEquals(invoice.status, InvoiceStatusType.NEW)
         }
@@ -278,6 +313,7 @@ class WebTests(
     suspend fun createMerchant(commission: BigDecimal): Merchant {
         return merchantRepo.save(
             Merchant()
+                .setApiKey(randomStringByKotlinRandom(64))
                 .setCommission(commission)
                 .setLogin(faker.name().username())
                 .setEmail(faker.internet().emailAddress()),
@@ -288,7 +324,7 @@ class WebTests(
     @Test
     fun testCreateOrder() {
         // #1 занят другим тестом
-        createOrderWithNumber(defaultMerchantId, 2)
+        createOrderWithNumber(defaultMerchantId, defaultApiKey, 2)
     }
 
 
@@ -303,7 +339,7 @@ class WebTests(
         runBlocking {
             val merch = createMerchant(commission)
 
-            val response = createOrderWithNumber(merch.id, 3, sum, CommissionType.CLIENT)
+            val response = createOrderWithNumber(merch.id, merch.apiKey, 3, sum, CommissionType.CLIENT)
 
             val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)
@@ -333,7 +369,7 @@ class WebTests(
         runBlocking {
             val merch = createMerchant(commission)
 
-            val response = createOrderWithNumber(merch.id, 4, sum, CommissionType.MERCHANT)
+            val response = createOrderWithNumber(merch.id, merch.apiKey, 4, sum, CommissionType.MERCHANT)
 
             val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)

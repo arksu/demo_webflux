@@ -38,8 +38,8 @@ class OrderService(
      */
     suspend fun startOrder(request: CreateOrderRequestDTO): Order {
         return dslContext.transactionCoroutine { trx ->
-            val invoice = invoiceRepo.findByIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
-                ?: throw InvoiceNotFoundOrLockedException(request.invoiceId)
+            val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
+                ?: throw InvoiceNotFoundOrLockedException(request.invoiceId.toString())
 
             if (invoice.status != InvoiceStatusType.NEW) {
                 throw UnprocessableEntityException("Wrong invoice status")

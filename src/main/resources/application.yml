@@ -28,6 +28,7 @@ logging:
 
 app:
   decimalScale: 8 # до скольки знаков после запятой округляем значения
+  widgetUrl: ${WIDGET_URL:http://localhost:8047}
   trongrid:
     apikey: ${TRONGRID_API_KEY}
     host:

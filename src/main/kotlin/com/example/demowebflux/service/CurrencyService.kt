@@ -1,5 +1,6 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.exception.CurrencyNotFoundException
 import com.example.demowebflux.repo.CurrencyRepo
 import com.example.jooq.enums.BlockchainType
@@ -13,6 +14,7 @@ class CurrencyService(
     private val currencyRepo: CurrencyRepo,
     private val dslContext: DSLContext,
 ) {
+    val allList = ArrayList<Currency>()
     val mapByName = HashMap<String, Currency>()
     val mapById = HashMap<Int, Currency>()
     val mapByBlockchain = HashMap<BlockchainType, MutableList<Currency>>()
@@ -22,9 +24,16 @@ class CurrencyService(
         reload()
     }
 
+    fun getById(id: Int): Currency {
+        return mapById[id] ?: throw CurrencyNotFoundException()
+    }
+
     fun reload() {
         // TODO !!! блокировка получения значений на время релоада
         mapByName.clear()
+        mapById.clear()
+        mapByBlockchain.clear()
+        allList.clear()
         currencyRepo.loadAll(dslContext)
             .filter { it.enabled }
             .doOnNext {
@@ -38,11 +47,8 @@ class CurrencyService(
                 } else {
                     list.add(it)
                 }
+                allList.add(it)
             }.blockLast()
-    }
-
-    fun getById(id: Int): Currency {
-        return mapById[id] ?: throw CurrencyNotFoundException()
     }
 
     fun getByName(name: String): Currency {

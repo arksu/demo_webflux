@@ -25,6 +25,7 @@ create table if not exists merchant
     id         uuid                              default gen_random_uuid() primary key,
     login      varchar(64)              not null,
     email      varchar(64)              null,
+    api_key    char(64)                 not null,
     -- комиссия мерчанта (сколько % забираем себе от суммы сделки)
     commission decimal                  not null check ( commission >= 0 ),
     enabled    bool                     not null default true,
@@ -39,6 +40,8 @@ create type invoice_status_type as enum ('NEW', 'PROCESSING', 'TERMINATED');
 create table if not exists invoice
 (
     id                uuid                              default gen_random_uuid() not null primary key,
+    -- внешний ид который передаем в виджет и ссылку
+    external_id       char(32)                 not null,
     status            invoice_status_type      not null,
     merchant_id       uuid                     not null,
     -- сколько денег хочет получить/отправить мерчант за сделку
@@ -58,6 +61,8 @@ create table if not exists invoice
     -- куда отправим в случае ошибки
     fail_url          varchar(512)             not null,
     created           timestamp with time zone not null default now(),
+    -- ключ который использовался при создании счета
+    api_key           char(64)                 not null,
     -- в пределах мерчанта order id должен быть уникален
     unique (merchant_id, merchant_order_id)
 );
@@ -113,8 +118,8 @@ create table if not exists blockchain_income_wallet
 );
 
 -- test data
-insert into merchant(id, login, email, commission)
-values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
+insert into merchant(id, login, email, api_key, commission)
+values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 1.5);
 
 
 -- debug

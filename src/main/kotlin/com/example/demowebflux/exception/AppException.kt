@@ -32,8 +32,8 @@ class MerchantNotFoundException(
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class InvoiceNotFoundOrLockedException(
     @ResponseErrorProperty
-    val invoiceId: UUID
-) : AppException("Invoice $invoiceId is not found or locked")
+    val id: String
+) : AppException("Invoice $id is not found")
 
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class NoFreeWalletException : AppException("No free wallet now, please try later")

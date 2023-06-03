@@ -14,6 +14,9 @@ class ExchangeRateService(
     fun getRate(from: Currency, to: Currency): BigDecimal {
         if (from.id == to.id) return BigDecimal.ONE
 
+        // надо учесть дату последнего обновления курса в кэше
+        // если курс протух то обязательно ждем актуальный курс, либо кидаем ошибку
+
         // TODO
         return BigDecimal("2.452").setScale(decimalScale, RoundingMode.FLOOR)
 //        return BigDecimal.ONE

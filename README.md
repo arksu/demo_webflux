@@ -10,7 +10,9 @@ order status:
 - error - some error has occurred
 - cancelled - no payment received within allotted time
 
-merchant -> invoice -> order -> customer (wallet)
+merchant -> invoice -> client redirect to widget 
+client (widget) -> select currency (with rates, actual amounts) -> create order
+order -> get actual rate -> customer (wallet)
 customer -> blockchain -> trx -> wallet
 check wallet trx amount -> 
     equal order amount -> complete order

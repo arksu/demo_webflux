@@ -23,6 +23,20 @@ class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>() {
             .toMonoAndMap()
     }
 
+    fun findByExternalId(id: String, context: DSLContext): Mono<Invoice> {
+        return context.selectFrom(INVOICE)
+            .where(INVOICE.EXTERNAL_ID.eq(id))
+            .toMonoAndMap()
+    }
+
+    fun findByExternalIdForUpdateSkipLocked(id: String, context: DSLContext): Mono<Invoice> {
+        return context.selectFrom(INVOICE)
+            .where(INVOICE.EXTERNAL_ID.eq(id))
+            .forUpdate()
+            .skipLocked()
+            .toMonoAndMap()
+    }
+
     fun updateStatus(invoice: Invoice, context: DSLContext): Mono<Int> {
         return context.update(INVOICE)
             .set(INVOICE.STATUS, invoice.status)
