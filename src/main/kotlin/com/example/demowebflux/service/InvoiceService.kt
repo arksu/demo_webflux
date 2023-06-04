@@ -6,7 +6,6 @@ import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.repo.InvoiceRepo
-import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.tables.pojos.Invoice
@@ -16,7 +15,6 @@ import org.jooq.DSLContext
 import org.jooq.exception.IntegrityConstraintViolationException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.math.BigDecimal
 import java.math.RoundingMode
 
 @Service
@@ -24,6 +22,7 @@ class InvoiceService(
     private val dslContext: DSLContext,
     private val merchantService: MerchantService,
     private val currencyService: CurrencyService,
+    private val calcService: CalcService,
     private val exchangeRateService: ExchangeRateService,
     private val invoiceRepo: InvoiceRepo,
     @Value("\${app.decimalScale:8}")
@@ -81,28 +80,31 @@ class InvoiceService(
                 available == null || available.contains(it.id)
             }
             .map {
-                val rate = exchangeRateService.getRate(it, invoiceCurrency)
+                val rate = exchangeRateService.getRate(
+                    from = invoiceCurrency,
+                    to = it,
+                )
                 it to rate
             }
             // исключим те валюты по которым нет курса
             .filter { (_, rate) -> rate != null }
             .map { (curr, rate) ->
+                val referenceAmount = invoice.amount * rate!!
 
+                val calc = calcService.calcOrderAmounts(invoice, referenceAmount, merchant.commission)
                 AvailableCurrenciesResponseDTO.CurrencyAndRate(
                     name = curr.name,
-                    rate = rate!!,
-                    // TODO комиссия и тд. полный расчет суммы
-                    amount = invoice.amount * BigDecimal.ONE.divide(rate, decimalScale, RoundingMode.HALF_UP)
+                    rate = rate,
+                    // сумма которую должен заплатить клиент
+                    amount = calc.customerAmount
                 )
             }
         return AvailableCurrenciesResponseDTO(list)
     }
 
-
     fun mapToResponse(invoice: Invoice): InvoiceResponseDTO {
         return InvoiceResponseDTO(
             id = invoice.externalId,
-            // TODO currency
             currency = currencyService.getById(invoice.currencyId).name,
             amount = invoice.amount,
             successUrl = invoice.successUrl,
