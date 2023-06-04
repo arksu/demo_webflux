@@ -111,7 +111,7 @@ class InvoiceService(
             amount = invoice.amount,
             successUrl = invoice.successUrl,
             failUrl = invoice.failUrl,
-            paymentUrl = "$widgetUrl?id=${invoice.externalId}"
+            paymentUrl = "$widgetUrl${invoice.externalId}"
         )
     }
 }
