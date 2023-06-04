@@ -18,8 +18,6 @@ class OrderController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     suspend fun start(@RequestBody @Valid request: CreateOrderRequestDTO): OrderResponseDTO {
-        return orderService.startOrder(request).let {
-            OrderResponseDTO(it)
-        }
+        return orderService.startOrder(request)
     }
 }

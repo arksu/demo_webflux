@@ -23,11 +23,13 @@ values ('USDT-TRC20', 'TRON', 'Tether TRC-20', false),
 create table if not exists merchant
 (
     id         uuid                              default gen_random_uuid() primary key,
-    login      varchar(64)              not null,
-    email      varchar(64)              null,
-    api_key    char(64)                 not null,
+    login      varchar(64)              not null unique,
+    email      varchar(64)              not null,
+    -- уникальный ключ для обращений к API платформы
+    api_key    char(64)                 not null unique,
     -- комиссия мерчанта (сколько % забираем себе от суммы сделки)
     commission decimal                  not null check ( commission >= 0 ),
+    -- можно отключить мерчанта
     enabled    bool                     not null default true,
     created    timestamp with time zone not null default now()
 );
@@ -60,9 +62,9 @@ create table if not exists invoice
     success_url       varchar(512)             not null,
     -- куда отправим в случае ошибки
     fail_url          varchar(512)             not null,
-    created           timestamp with time zone not null default now(),
     -- ключ который использовался при создании счета
     api_key           char(64)                 not null,
+    created           timestamp with time zone not null default now(),
     -- в пределах мерчанта order id должен быть уникален
     unique (merchant_id, merchant_order_id)
 );
@@ -80,7 +82,9 @@ create table if not exists "order"
     -- сколько берем с клиента
     customer_amount            decimal                  not null check ( customer_amount > 0 ),
     -- сколько фактически пришло от клиента (может он отправил больше чем надо)
-    customer_amount_fact       decimal                  not null check ( customer_amount_fact >= 0 ),
+    customer_amount_received   decimal                  not null check ( customer_amount_received >= 0 ),
+    -- сколько еще ожидаем от клиента для завершения сделки
+    customer_amount_pending    decimal                  not null check ( customer_amount_pending >= 0 ),
     -- сколько отдаем мерчанту в валюте сделки с учетом комиссий
     merchant_amount_by_order   decimal                  not null check ( merchant_amount_by_order > 0 ),
     -- сколько отдаем мерчанту в валюте invoice
@@ -112,6 +116,9 @@ create table if not exists blockchain_income_wallet
     -- тогда впишем сюда ид заказа по которому ожидаем оплату на кошелек
     -- null - если кошелек свободен
     order_id    uuid                     null references "order" (id),
+    -- можно отключить кошелек
+    -- (на него не будут создаваться новые заказы, но те что в обработке - продолжат процессится шедулером)
+    enabled     bool                     not null default true,
     updated     timestamp with time zone not null default now(),
     -- на одном адресе не может быть несколько валют
     unique (address, currency_id)
@@ -121,6 +128,10 @@ create table if not exists blockchain_income_wallet
 insert into merchant(id, login, email, api_key, commission)
 values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 1.5);
 
+insert into blockchain_income_wallet (address, currency_id, order_id)
+values ('test_address1', 3, null);
+values ('test_address2', 4, null);
+values ('test_address3', 5, null);
 
 -- debug
 create table if not exists account

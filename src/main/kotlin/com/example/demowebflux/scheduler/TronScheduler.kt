@@ -36,14 +36,15 @@ class TronScheduler(
         })
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelay = 1000)
     fun update() {
         // найдем занятые кошельки по трону
         blockchainIncomeWalletRepo
             .findIsBusy(nileCurrencies, dslContext)
             .doOnNext {
                 // TODO
-                println(it)
+//                println(it)
+                val some = it
             }.subscribe()
     }
 }

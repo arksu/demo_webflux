@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -215,7 +216,7 @@ class WebTests(
             .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(invoiceRequest))
             .exchange()
-            .expectStatus().isBadRequest
+            .expectStatus().isEqualTo(HttpStatus.CONFLICT)
     }
 
     fun createInvoice(request: InvoiceRequestDTO): InvoiceResponseDTO {
@@ -251,11 +252,13 @@ class WebTests(
     }
 
     fun createFreeWallet(currencyName: String): BlockchainIncomeWallet {
+
         val wallet = BlockchainIncomeWallet()
         wallet.address = UUID.randomUUID().toString()
         wallet.currencyId = currencyService.getByName(currencyName).id
         wallet.orderId = null
         return runBlocking {
+            blockchainIncomeWalletRepo.disableAll(dslContext).awaitSingle()
             blockchainIncomeWalletRepo.save(wallet, dslContext).awaitSingle()
         }
     }
@@ -298,8 +301,12 @@ class WebTests(
         assertNotNull(response)
 
         runBlocking {
+            val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
+            assertNotNull(invoice)
+            assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
+
             // убедимся что созданный заказ есть в базе
-            val order = orderRepo.findById(response.id, dslContext).awaitSingle()
+            val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
             assertEquals(order.status, OrderStatusType.NEW)
 
             // а также что наш кошелек заблокировался
@@ -333,15 +340,19 @@ class WebTests(
      */
     @Test
     fun testOrderCalcClientCommission() {
-        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.FLOOR)
-        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.FLOOR)
+        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.HALF_UP)
+        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
             val merch = createMerchant(commission)
 
             val response = createOrderWithNumber(merch.id, merch.apiKey, 3, sum, CommissionType.CLIENT)
 
-            val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
+            val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
+            assertNotNull(invoice)
+            assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
+
+            val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)
 
             if (order != null) {
@@ -363,15 +374,19 @@ class WebTests(
 
     @Test
     fun testOrderCalcMerchantCommission() {
-        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.FLOOR)
-        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.FLOOR)
+        val sum = BigDecimal("1353.465").setScale(decimalScale, RoundingMode.HALF_UP)
+        val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
             val merch = createMerchant(commission)
 
             val response = createOrderWithNumber(merch.id, merch.apiKey, 4, sum, CommissionType.MERCHANT)
 
-            val order = orderRepo.findById(response.id, dslContext).awaitSingleOrNull()
+            val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
+            assertNotNull(invoice)
+            assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
+
+            val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)
 
             if (order != null) {

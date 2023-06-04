@@ -1,6 +1,7 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
+import com.example.demowebflux.controller.dto.OrderResponseDTO
 import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.exception.NoFreeWalletException
@@ -41,7 +42,7 @@ class OrderService(
     /**
      * клиент выбрал валюту, запускаем сделку, выбираем кошелек под эту валюту
      */
-    suspend fun startOrder(request: CreateOrderRequestDTO): Order {
+    suspend fun startOrder(request: CreateOrderRequestDTO): OrderResponseDTO {
         val targetCurrency = currencyService.getByName(request.selectedCurrency)
 
         return dslContext.transactionCoroutine { trx ->
@@ -93,6 +94,12 @@ class OrderService(
             // сколько должны мерчанту в валюте счета (в той в которой он изначально хотел получить)
             new.merchantAmountByInvoice = calcModel.merchantAmountByInvoice
 
+            // сколько фактически пришло от клиента (может он отправил больше чем надо)
+            // на момент начала сделки ставим ноль
+            new.customerAmountReceived = BigDecimal.ZERO
+            // сколько еще осталось получить по сделке
+            new.customerAmountPending = calcModel.customerAmount
+
             // сумма комиссии системы которую взимаем со сделки
             new.commissionAmount = new.customerAmount - new.merchantAmountByOrder
             if (new.commissionAmount < BigDecimal.ZERO) {
@@ -104,9 +111,6 @@ class OrderService(
             new.referenceAmount = referenceAmount.setScale(scale, RoundingMode.HALF_UP)
             new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
-            // сколько фактически пришло от клиента (может он отправил больше чем надо)
-            // на момент начала сделки ставим ноль
-            new.customerAmountFact = BigDecimal.ZERO
 
             // сохраняем ордер в базу
             val saved = orderRepo.save(new, trx.dsl()).awaitSingle()
@@ -115,7 +119,35 @@ class OrderService(
             wallet.orderId = saved.id
             blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
 
-            saved
+            OrderResponseDTO(
+                invoiceId = invoice.externalId,
+                walletAddress = wallet.address,
+                currency = targetCurrency.name,
+                amount = saved.customerAmount,
+                amountReceived = saved.customerAmountReceived,
+                amountPending = saved.customerAmountPending
+            )
         }
+    }
+
+    suspend fun getByInvoiceExternalId(invoiceExternalId: String): OrderResponseDTO {
+        val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(invoiceExternalId, dslContext).awaitSingleOrNull()
+            ?: throw InvoiceNotFoundOrLockedException(invoiceExternalId)
+
+        if (invoice.status != InvoiceStatusType.PROCESSING) {
+            throw UnprocessableEntityException("Wrong invoice status")
+        }
+        val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
+
+        val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
+
+        return OrderResponseDTO(
+            invoiceId = invoice.externalId,
+            walletAddress = wallet.address,
+            currency = currencyService.getById(order.selectedCurrencyId).name,
+            amount = order.customerAmount,
+            amountReceived = order.customerAmountReceived,
+            amountPending = order.customerAmountPending
+        )
     }
 }

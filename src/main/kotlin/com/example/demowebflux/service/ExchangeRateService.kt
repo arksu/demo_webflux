@@ -27,7 +27,7 @@ class ExchangeRateService(
 
 
         // TODO
-        return BigDecimal("2.452").setScale(decimalScale, RoundingMode.FLOOR)
+        return BigDecimal("2.452").setScale(decimalScale, RoundingMode.HALF_UP)
 //        return BigDecimal.ONE
     }
 }

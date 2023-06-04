@@ -5,6 +5,7 @@ import com.example.demowebflux.controller.dto.InvoiceRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
+import com.example.demowebflux.exception.InvoiceAlreadyExists
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.InvoiceStatusType
@@ -32,6 +33,7 @@ class InvoiceService(
 ) {
     suspend fun create(request: InvoiceRequestDTO): Invoice {
         val merchant = merchantService.getById(request.merchantId, dslContext)
+        // ключ переданный в запросе должен в точности совпадать с ключом мерчанта
         if (merchant.apiKey != request.apiKey) {
             throw BadRequestException("Wrong api key")
         }
@@ -43,18 +45,18 @@ class InvoiceService(
         new.customerId = request.customerId
         new.merchantOrderId = request.orderId
         new.currencyId = currency.id
-        new.amount = request.amount.setScale(decimalScale, RoundingMode.FLOOR)
+        new.amount = request.amount.setScale(decimalScale, RoundingMode.HALF_UP)
         new.description = request.description
         new.successUrl = request.successUrl
         new.failUrl = request.failUrl
         new.commissionType = request.commissionCharge
-        new.apiKey = merchant.apiKey
+        new.apiKey = request.apiKey
         new.externalId = randomStringByKotlinRandom(32)
 
         try {
             return invoiceRepo.save(new, dslContext).awaitSingle()
         } catch (e: IntegrityConstraintViolationException) {
-            throw BadRequestException("Check your request for uniq (orderId)")
+            throw InvoiceAlreadyExists(request.orderId)
         }
     }
 

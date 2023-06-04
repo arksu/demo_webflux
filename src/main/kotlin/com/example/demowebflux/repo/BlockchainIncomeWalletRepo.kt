@@ -1,13 +1,14 @@
 package com.example.demowebflux.repo
 
-import com.example.demowebflux.util.toFlux
 import com.example.jooq.Tables.BLOCKCHAIN_INCOME_WALLET
 import com.example.jooq.tables.pojos.BlockchainIncomeWallet
 import com.example.jooq.tables.records.BlockchainIncomeWalletRecord
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.noCondition
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.toMono
 import java.util.*
 
 @Repository
@@ -20,12 +21,19 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
         return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
             .where(BLOCKCHAIN_INCOME_WALLET.CURRENCY_ID.eq(currencyId))
             .and(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.isNull)
+            .and(BLOCKCHAIN_INCOME_WALLET.ENABLED.isTrue)
             .limit(100)
             .forUpdate()
             .skipLocked()
-            .toFlux()
-            .map(mapper)
+            .toFluxAndMap()
             .collectList()
+    }
+
+    fun disableAll(context: DSLContext): Mono<Int> {
+        return context.update(BLOCKCHAIN_INCOME_WALLET)
+            .set(BLOCKCHAIN_INCOME_WALLET.ENABLED, false)
+            .where(noCondition())
+            .toMono()
     }
 
     /**
@@ -34,8 +42,14 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
     fun findIsBusy(currencies: List<Int>, context: DSLContext): Flux<BlockchainIncomeWallet> {
         return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
             .where(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.isNotNull)
-            .toFlux()
-            .map(mapper)
+            .and(BLOCKCHAIN_INCOME_WALLET.CURRENCY_ID.`in`(currencies))
+            .toFluxAndMap()
+    }
+
+    fun findByOrderId(id: UUID, context: DSLContext): Mono<BlockchainIncomeWallet> {
+        return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
+            .where(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.eq(id))
+            .toMonoAndMap()
     }
 
     fun updateOrderId(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {
@@ -44,6 +58,5 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
             .where(BLOCKCHAIN_INCOME_WALLET.ID.eq(entity.id))
             .returning()
             .toMonoAndMap()
-
     }
 }

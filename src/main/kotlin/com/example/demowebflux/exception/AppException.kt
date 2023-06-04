@@ -17,6 +17,12 @@ class UnprocessableEntityException(
     message: String
 ) : AppException(message)
 
+@ResponseStatus(HttpStatus.CONFLICT)
+class InvoiceAlreadyExists(
+    @ResponseErrorProperty
+    val orderId: String
+) : AppException("Invoice with the same orderId already exists")
+
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class CurrencyNotFoundException(
     @ResponseErrorProperty

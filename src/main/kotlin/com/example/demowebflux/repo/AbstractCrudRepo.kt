@@ -1,8 +1,8 @@
 package com.example.demowebflux.repo
 
 import org.jooq.*
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toMono
 
 abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
     abstract val table: Table<R>
@@ -22,7 +22,11 @@ abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
             .toMonoAndMap()
     }
 
-    fun ResultQuery<R>.toMonoAndMap() : Mono<T> {
+    fun ResultQuery<R>.toMonoAndMap(): Mono<T> {
         return Mono.from(this).map(mapper)
+    }
+
+    fun ResultQuery<R>.toFluxAndMap(): Flux<T> {
+        return Flux.from(this).map(mapper)
     }
 }
