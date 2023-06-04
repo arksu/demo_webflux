@@ -347,8 +347,8 @@ class WebTests(
             if (order != null) {
                 assertEquals(order.invoiceAmount.stripTrailingZeros().toPlainString(), "1353.465")
                 assertEquals(order.referenceAmount.stripTrailingZeros().toPlainString(), "1353.465")
-                assertEquals(order.merchantAmountOrder.stripTrailingZeros().toPlainString(), "1353.465")
-                assertEquals(order.merchantAmount.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.merchantAmountByOrder.stripTrailingZeros().toPlainString(), "1353.465")
+                assertEquals(order.merchantAmountByInvoice.stripTrailingZeros().toPlainString(), "1353.465")
 
                 // клиент заплатит комиссию
                 assertEquals(order.customerAmount.stripTrailingZeros().toPlainString(), "1403.001819")
@@ -379,8 +379,8 @@ class WebTests(
                 assertEquals(order.referenceAmount.stripTrailingZeros().toPlainString(), "1353.465")
 
                 // мерчант заплатит комиссию. а значит получит меньше
-                assertEquals(order.merchantAmountOrder.stripTrailingZeros().toPlainString(), "1303.928181")
-                assertEquals(order.merchantAmount.stripTrailingZeros().toPlainString(), "1303.928181")
+                assertEquals(order.merchantAmountByOrder.stripTrailingZeros().toPlainString(), "1303.928181")
+                assertEquals(order.merchantAmountByInvoice.stripTrailingZeros().toPlainString(), "1303.928181")
 
                 assertEquals(order.customerAmount.stripTrailingZeros().toPlainString(), "1353.465")
                 // и ее размер

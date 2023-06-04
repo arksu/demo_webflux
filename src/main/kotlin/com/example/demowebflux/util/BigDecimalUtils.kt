@@ -4,6 +4,7 @@ import java.math.BigDecimal
 
 val BIGDECIMAL_100 = BigDecimal(100)
 
-fun BigDecimal.percentToMult(): BigDecimal {
+fun BigDecimal.percentToMult(scale: Int): BigDecimal {
+//    return this.divide(BIGDECIMAL_100, scale, RoundingMode.HALF_UP)
     return this.divide(BIGDECIMAL_100)
 }

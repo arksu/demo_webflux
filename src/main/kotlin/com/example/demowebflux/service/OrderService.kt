@@ -9,8 +9,6 @@ import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
-import com.example.demowebflux.util.percentToMult
-import com.example.jooq.enums.CommissionType
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
@@ -19,18 +17,24 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Service
 class OrderService(
+    private val dslContext: DSLContext,
     private val currencyService: CurrencyService,
+    private val calcService: CalcService,
+    private val merchantService: MerchantService,
+    private val exchangeRateService: ExchangeRateService,
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
-    private val dslContext: DSLContext,
-    private val exchangeRateService: ExchangeRateService,
-    private val merchantService: MerchantService,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
+
+    @Value("\${app.decimalScale}")
+    private val scale: Int
 ) {
     val log by LoggerDelegate()
 
@@ -42,7 +46,7 @@ class OrderService(
 
         return dslContext.transactionCoroutine { trx ->
             val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
-                ?: throw InvoiceNotFoundOrLockedException(request.invoiceId.toString())
+                ?: throw InvoiceNotFoundOrLockedException(request.invoiceId)
 
             if (invoice.status != InvoiceStatusType.NEW) {
                 throw UnprocessableEntityException("Wrong invoice status")
@@ -71,51 +75,46 @@ class OrderService(
             val new = Order()
             new.status = OrderStatusType.NEW
             new.invoiceId = invoice.id
-            new.invoiceAmount = invoice.amount
-            new.incomeWalletId = wallet.id
 
             // эталонная сумма сделки в валюте которую выбрал клиент, от которой идет расчет (invoice.amount -> exchange_rate[selected_currency_id])
-            new.referenceAmount = invoice.amount * exchangeRate
-            // сколько фактически пришло от клиента (может он отправил больше чем надо)
-            new.customerAmountFact = BigDecimal.ZERO
+            val referenceAmount = invoice.amount * exchangeRate
+            // запишем комиссию мерчанта на момент создания сделки
             new.commission = merchant.commission
+            // запишем сумму счета на основании которого создается сделка
+            new.invoiceAmount = invoice.amount
 
-            @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA") // DDL: commissionType not null
-            when (invoice.commissionType) {
-                CommissionType.CLIENT -> {
-                    // сколько берем с клиента, он должен заплатить больше на сумму комиссии
-                    new.customerAmount = new.referenceAmount * (BigDecimal.ONE + merchant.commission.percentToMult())
-                    // сколько отдаем мерчанту в валюте сделки с учетом комиссий
-                    new.merchantAmountOrder = new.referenceAmount
-                    // сколько отдаем мерчанту в валюте invoice
-                    new.merchantAmount = invoice.amount
-                }
+            // производим расчет сумм
+            val calcModel = calcService.calcOrderAmounts(invoice, referenceAmount, merchant.commission)
 
-                CommissionType.MERCHANT -> {
-                    // сколько берем с клиента, он должен ровно столько сколько заявлено
-                    new.customerAmount = new.referenceAmount
-                    // сколько отдаем мерчанту в валюте сделки с учетом комиссий
-                    new.merchantAmountOrder = new.referenceAmount * (BigDecimal.ONE - merchant.commission.percentToMult())
-                    // сколько отдаем мерчанту в валюте invoice - он получит меньше на сумму комиссии
-                    new.merchantAmount = invoice.amount * (BigDecimal.ONE - merchant.commission.percentToMult())
-                }
-            }
+            // сколько ожидаем получить от клиента, чтобы считать сделку завершенной
+            new.customerAmount = calcModel.customerAmount
+            // сколько из этого причитается мерчанту в валюте сделки
+            new.merchantAmountByOrder = calcModel.merchantAmountByOrder
+            // сколько должны мерчанту в валюте счета (в той в которой он изначально хотел получить)
+            new.merchantAmountByInvoice = calcModel.merchantAmountByInvoice
 
-            // сумма комиссии которую взимаем с мерчанта
-            new.commissionAmount = new.customerAmount - new.merchantAmountOrder
+            // сумма комиссии системы которую взимаем со сделки
+            new.commissionAmount = new.customerAmount - new.merchantAmountByOrder
             if (new.commissionAmount < BigDecimal.ZERO) {
                 throw UnprocessableEntityException("Commission could not be negative")
             }
 
-            new.exchangeRate = exchangeRate
+            // сохраняем в базу расчеты с учетом установленной в системе погрешности
+            new.exchangeRate = exchangeRate.setScale(scale, RoundingMode.HALF_UP)
+            new.referenceAmount = referenceAmount.setScale(scale, RoundingMode.HALF_UP)
             new.selectedCurrencyId = targetCurrency.id
             new.confirmations = 0
+            // сколько фактически пришло от клиента (может он отправил больше чем надо)
+            // на момент начала сделки ставим ноль
+            new.customerAmountFact = BigDecimal.ZERO
 
+            // сохраняем ордер в базу
             val saved = orderRepo.save(new, trx.dsl()).awaitSingle()
 
             // занимаем кошелек
             wallet.orderId = saved.id
             blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
+
             saved
         }
     }
