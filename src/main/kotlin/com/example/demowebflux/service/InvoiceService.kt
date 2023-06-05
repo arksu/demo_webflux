@@ -3,9 +3,8 @@ package com.example.demowebflux.service
 import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
 import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
-import com.example.demowebflux.exception.BadRequestException
-import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.exception.InvoiceAlreadyExists
+import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.InvoiceStatusType
@@ -26,22 +25,20 @@ class InvoiceService(
     private val calcService: CalcService,
     private val exchangeRateService: ExchangeRateService,
     private val invoiceRepo: InvoiceRepo,
+    private val shopService: ShopService,
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
     @Value("\${app.widgetUrl}")
     private val widgetUrl: String
 ) {
     suspend fun create(request: InvoiceRequestDTO): Invoice {
-        val merchant = merchantService.getById(request.merchantId, dslContext)
-        // ключ переданный в запросе должен в точности совпадать с ключом мерчанта
-        if (merchant.apiKey != request.apiKey) {
-            throw BadRequestException("Wrong api key")
-        }
+        // ищем магазин по указанному ключу
+        val shop = shopService.getByApiKey(request.apiKey, dslContext)
         val currency = currencyService.getByName(request.currency)
 
         val new = Invoice()
         new.status = InvoiceStatusType.NEW
-        new.merchantId = merchant.id
+        new.shopId = shop.id
         new.customerId = request.customerId
         new.merchantOrderId = request.orderId
         new.currencyId = currency.id
@@ -49,7 +46,6 @@ class InvoiceService(
         new.description = request.description
         new.successUrl = request.successUrl
         new.failUrl = request.failUrl
-        new.commissionType = request.commissionCharge
         new.apiKey = request.apiKey
         new.externalId = randomStringByKotlinRandom(32)
 
@@ -68,8 +64,9 @@ class InvoiceService(
         val invoice = invoiceRepo.findByExternalId(id, dslContext).awaitSingleOrNull()
             ?: throw InvoiceNotFoundOrLockedException(id)
         val invoiceCurrency = currencyService.getById(invoice.currencyId)
+        val shop = shopService.getById(invoice.shopId, dslContext)
         // ищем нашего мерчанта
-        val merchant = merchantService.getById(invoice.merchantId, dslContext)
+        val merchant = merchantService.getById(shop.merchantId, dslContext)
         // получаем список валют доступных для него
         val available = merchantService.getPaymentAvailableCurrencies(merchant)
 
@@ -93,7 +90,7 @@ class InvoiceService(
             .map { (curr, rate) ->
                 val referenceAmount = invoice.amount * rate!!
 
-                val calc = calcService.calcOrderAmounts(invoice, referenceAmount, merchant.commission)
+                val calc = calcService.calcOrderAmounts(invoice, shop, referenceAmount, merchant.commission)
                 AvailableCurrenciesResponseDTO.CurrencyAndRate(
                     name = curr.name,
                     rate = rate,

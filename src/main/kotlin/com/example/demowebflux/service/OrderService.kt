@@ -31,6 +31,7 @@ class OrderService(
     private val calcService: CalcService,
     private val merchantService: MerchantService,
     private val exchangeRateService: ExchangeRateService,
+    private val shopService: ShopService,
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
@@ -57,7 +58,8 @@ class OrderService(
             invoice.status = InvoiceStatusType.PROCESSING
             invoiceRepo.updateStatus(invoice, trx.dsl()).awaitFirst()
 
-            val merchant = merchantService.getById(invoice.merchantId, trx.dsl())
+            val shop = shopService.getById(invoice.shopId, trx.dsl())
+            val merchant = merchantService.getById(shop.merchantId, trx.dsl())
             val fromCurrency = currencyService.getById(invoice.currencyId)
 
             // ищем свободные кошельки на которые можем принять
@@ -87,7 +89,7 @@ class OrderService(
             new.invoiceAmount = invoice.amount
 
             // производим расчет сумм
-            val calcModel = calcService.calcOrderAmounts(invoice, referenceAmount, merchant.commission)
+            val calcModel = calcService.calcOrderAmounts(invoice, shop, referenceAmount, merchant.commission)
 
             // сколько ожидаем получить от клиента, чтобы считать сделку завершенной
             new.customerAmount = calcModel.customerAmount

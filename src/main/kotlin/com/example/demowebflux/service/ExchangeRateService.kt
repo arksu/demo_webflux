@@ -17,7 +17,7 @@ class ExchangeRateService(
      * то есть это просто множитель для FROM
      * либо null - если конвертация в принципе невозможна
      */
-    fun getRate(from: Currency, to: Currency): BigDecimal? {
+    suspend fun getRate(from: Currency, to: Currency): BigDecimal? {
         if (from.id == to.id) return BigDecimal.ONE
 
         // надо учесть дату последнего обновления курса в кэше

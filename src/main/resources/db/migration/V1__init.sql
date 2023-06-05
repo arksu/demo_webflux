@@ -25,8 +25,6 @@ create table if not exists merchant
     id         uuid                              default gen_random_uuid() primary key,
     login      varchar(64)              not null unique,
     email      varchar(64)              not null,
-    -- уникальный ключ для обращений к API платформы
-    api_key    char(64)                 not null unique,
     -- комиссия мерчанта (сколько % забираем себе от суммы сделки)
     commission decimal                  not null check ( commission >= 0 ),
     -- можно отключить мерчанта
@@ -37,6 +35,27 @@ create table if not exists merchant
 -- кто платит комиссию?
 create type commission_type as enum ('CLIENT', 'MERCHANT');
 
+-- магазины мерчанта на которых он интегрируется
+create table if not exists shop
+(
+    id                   uuid                              default gen_random_uuid() primary key,
+    merchant_id          uuid                     not null references merchant (id),
+    -- имя сайта в админке
+    name                 varchar(128)             not null,
+    -- ссылка на сайт на которую может перейти клиент из виджета
+    url                  varchar(512)             not null,
+    -- уникальный ключ для обращений к API платформы
+    api_key              char(64)                 not null unique,
+    -- кто будет оплачивать комиссию
+    commission_type      commission_type          not null,
+    -- время жизни сделки (после завершается)
+    expire_minutes       int                      not null default 30,
+    -- % от суммы сделки при получении платежа в пределах которого считаем сделку завершенной
+    underpayment_allowed decimal                  not null default 0.01,
+    deleted              bool                     not null default false,
+    created              timestamp with time zone not null default now()
+);
+
 create type invoice_status_type as enum ('NEW', 'PROCESSING', 'TERMINATED');
 
 create table if not exists invoice
@@ -45,13 +64,11 @@ create table if not exists invoice
     -- внешний ид который передаем в виджет и ссылку
     external_id       char(32)                 not null,
     status            invoice_status_type      not null,
-    merchant_id       uuid                     not null,
+    shop_id           uuid                     not null references shop (id),
     -- сколько денег хочет получить/отправить мерчант за сделку
     amount            decimal                  not null check ( amount > 0 ),
     -- в какой валюте мерчант хочет получить/отправить
     currency_id       int                      not null references currency (id),
-    -- кто будет оплачивать комиссию
-    commission_type   commission_type          not null,
     -- внутренний ид клиента на стороне мерчанта
     customer_id       varchar(64)              not null,
     -- внутренний ид сделки на стороне мерчанта
@@ -66,7 +83,7 @@ create table if not exists invoice
     api_key           char(64)                 not null,
     created           timestamp with time zone not null default now(),
     -- в пределах мерчанта order id должен быть уникален
-    unique (merchant_id, merchant_order_id)
+    unique (shop_id, merchant_order_id)
 );
 
 create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'MISMATCH', 'NOT_ENOUGH');
@@ -125,8 +142,11 @@ create table if not exists blockchain_income_wallet
 );
 
 -- test data
-insert into merchant(id, login, email, api_key, commission)
-values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 1.5);
+insert into merchant(id, login, email, commission)
+values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
+
+insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, underpayment_allowed)
+values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT', 35, 0.02);
 
 insert into blockchain_income_wallet (address, currency_id, order_id)
 values ('test_address1', 3, null);

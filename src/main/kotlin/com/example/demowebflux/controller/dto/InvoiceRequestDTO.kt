@@ -8,8 +8,6 @@ import java.math.BigDecimal
 import java.util.*
 
 data class InvoiceRequestDTO(
-    val merchantId: UUID,
-
     @field:NotBlank
     val apiKey: String,
 
@@ -43,10 +41,5 @@ data class InvoiceRequestDTO(
     val successUrl: String,
 
     @field:NotBlank
-    val failUrl: String,
-
-    /**
-     * кто платит комиссию
-     */
-    val commissionCharge: CommissionType = CommissionType.CLIENT
+    val failUrl: String
 )

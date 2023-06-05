@@ -36,6 +36,13 @@ class MerchantNotFoundException(
 ) : AppException("Merchant $merchantId is not found")
 
 @ResponseStatus(HttpStatus.BAD_REQUEST)
+class ShopNotFoundException(
+    @ResponseErrorProperty
+    val shopId: UUID
+) : AppException("Shop $shopId is not found")
+
+
+@ResponseStatus(HttpStatus.BAD_REQUEST)
 class InvoiceNotFoundOrLockedException(
     @ResponseErrorProperty
     val id: String

@@ -2,12 +2,9 @@ package com.example.demowebflux
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
-import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
-import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
-import com.example.demowebflux.repo.InvoiceRepo
-import com.example.demowebflux.repo.MerchantRepo
-import com.example.demowebflux.repo.OrderRepo
+import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
+import com.example.demowebflux.repo.*
 import com.example.demowebflux.service.CurrencyService
 import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.CommissionType
@@ -15,6 +12,7 @@ import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.BlockchainIncomeWallet
 import com.example.jooq.tables.pojos.Merchant
+import com.example.jooq.tables.pojos.Shop
 import com.github.javafaker.Faker
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
@@ -72,6 +70,9 @@ class WebTests(
     private lateinit var merchantRepo: MerchantRepo
 
     @Autowired
+    private lateinit var shopRepo: ShopRepo
+
+    @Autowired
     private lateinit var blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo
 
     @Autowired
@@ -99,7 +100,6 @@ class WebTests(
     fun testWrongInvoice() {
         // сумма 0
         val invoiceRequest = InvoiceRequestDTO(
-            defaultMerchantId,
             defaultApiKey,
             "some_customer_id",
             "order#1",
@@ -108,7 +108,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
         )
 
         webClient.post()
@@ -120,7 +119,6 @@ class WebTests(
 
         // сумма
         val invoiceRequest2 = InvoiceRequestDTO(
-            defaultMerchantId,
             defaultApiKey,
             "some_customer_id",
             "order#1",
@@ -129,7 +127,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
         )
 
         webClient.post()
@@ -141,7 +138,6 @@ class WebTests(
 
         // валюта
         val invoiceRequest3 = InvoiceRequestDTO(
-            defaultMerchantId,
             defaultApiKey,
             "some_customer_id",
             "order#1",
@@ -150,7 +146,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
         )
 
         webClient.post()
@@ -164,8 +159,7 @@ class WebTests(
     @Test
     fun testCreateWrongApiKeyInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
-            defaultMerchantId,
-            "123123",
+            "wrong_api_key",
             "some_customer_id",
             "order#112",
             "USDT-TRC20-NILE",
@@ -173,7 +167,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
         )
 
         // создаем инвойс
@@ -188,7 +181,6 @@ class WebTests(
     @Test
     fun testCreateInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
-            defaultMerchantId,
             defaultApiKey,
             "some_customer_id",
             "order#1",
@@ -197,7 +189,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            CommissionType.CLIENT
         )
 
         // создаем инвойс
@@ -268,13 +259,11 @@ class WebTests(
         apiKey: String,
         num: Int,
         sum: BigDecimal = BigDecimal(100),
-        commissionType: CommissionType = CommissionType.CLIENT,
         selectedCurrency: String = defaultCurrency
     ): InvoiceResponseDTO {
         val wallet = createFreeWallet(defaultCurrency)
 
         val invoiceRequest = InvoiceRequestDTO(
-            merchantId,
             apiKey,
             "some_customer_id",
             "order#$num",
@@ -283,7 +272,6 @@ class WebTests(
             null,
             "https://google.com",
             "https://google.com/fail",
-            commissionType
         )
 
         // создаем инвойс
@@ -317,13 +305,22 @@ class WebTests(
         return response
     }
 
-    suspend fun createMerchant(commission: BigDecimal): Merchant {
-        return merchantRepo.save(
+    suspend fun createMerchantAndShop(commission: BigDecimal, type: CommissionType): Shop {
+        val merch = merchantRepo.save(
             Merchant()
-                .setApiKey(randomStringByKotlinRandom(64))
                 .setCommission(commission)
                 .setLogin(faker.name().username())
                 .setEmail(faker.internet().emailAddress()),
+            dslContext
+        ).awaitSingle()
+
+        return shopRepo.save(
+            Shop()
+                .setApiKey(randomStringByKotlinRandom(64))
+                .setName(randomStringByKotlinRandom(12))
+                .setUrl(randomStringByKotlinRandom(12))
+                .setMerchantId(merch.id)
+                .setCommissionType(type),
             dslContext
         ).awaitSingle()
     }
@@ -344,9 +341,9 @@ class WebTests(
         val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
-            val merch = createMerchant(commission)
+            val shop = createMerchantAndShop(commission, CommissionType.CLIENT)
 
-            val response = createOrderWithNumber(merch.id, merch.apiKey, 3, sum, CommissionType.CLIENT)
+            val response = createOrderWithNumber(shop.id, shop.apiKey, 3, sum)
 
             val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
             assertNotNull(invoice)
@@ -378,9 +375,9 @@ class WebTests(
         val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
-            val merch = createMerchant(commission)
+            val shop = createMerchantAndShop(commission, CommissionType.MERCHANT)
 
-            val response = createOrderWithNumber(merch.id, merch.apiKey, 4, sum, CommissionType.MERCHANT)
+            val response = createOrderWithNumber(shop.id, shop.apiKey, 4, sum)
 
             val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
             assertNotNull(invoice)
