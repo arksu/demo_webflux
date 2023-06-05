@@ -305,7 +305,7 @@ class WebTests(
         return response
     }
 
-    suspend fun createMerchantAndShop(commission: BigDecimal, type: CommissionType): Shop {
+    suspend fun createMerchantAndShop(commission: BigDecimal, allowRecalculation: Boolean, type: CommissionType): Shop {
         val merch = merchantRepo.save(
             Merchant()
                 .setCommission(commission)
@@ -319,6 +319,7 @@ class WebTests(
                 .setApiKey(randomStringByKotlinRandom(64))
                 .setName(randomStringByKotlinRandom(12))
                 .setUrl(randomStringByKotlinRandom(12))
+                .setAllowRecalculation(allowRecalculation)
                 .setMerchantId(merch.id)
                 .setCommissionType(type),
             dslContext
@@ -341,7 +342,7 @@ class WebTests(
         val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
-            val shop = createMerchantAndShop(commission, CommissionType.CLIENT)
+            val shop = createMerchantAndShop(commission, false, CommissionType.CLIENT)
 
             val response = createOrderWithNumber(shop.id, shop.apiKey, 3, sum)
 
@@ -375,7 +376,7 @@ class WebTests(
         val commission = BigDecimal("3.66").setScale(decimalScale, RoundingMode.HALF_UP)
 
         runBlocking {
-            val shop = createMerchantAndShop(commission, CommissionType.MERCHANT)
+            val shop = createMerchantAndShop(commission, false, CommissionType.MERCHANT)
 
             val response = createOrderWithNumber(shop.id, shop.apiKey, 4, sum)
 

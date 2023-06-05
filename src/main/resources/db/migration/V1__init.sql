@@ -48,6 +48,8 @@ create table if not exists shop
     api_key              char(64)                 not null unique,
     -- кто будет оплачивать комиссию
     commission_type      commission_type          not null,
+    -- разрешить перерасчет в случае не полной оплаты клиентом
+    allow_recalculation  bool                     not null default false,
     -- время жизни сделки (после завершается)
     expire_minutes       int                      not null default 30,
     -- % от суммы сделки при получении платежа в пределах которого считаем сделку завершенной
