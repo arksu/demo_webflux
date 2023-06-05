@@ -2,7 +2,7 @@ package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
-import com.example.demowebflux.controller.dto.InvoiceResponseDTO
+import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.exception.InvoiceAlreadyExists
@@ -63,7 +63,7 @@ class InvoiceService(
     /**
      * получить список валют для конкретного счета
      */
-    suspend fun getAvailableForInvoice(id: String): AvailableCurrenciesResponseDTO {
+    suspend fun getAvailableCurrenciesForInvoice(id: String): AvailableCurrenciesResponseDTO {
         // ищем счет
         val invoice = invoiceRepo.findByExternalId(id, dslContext).awaitSingleOrNull()
             ?: throw InvoiceNotFoundOrLockedException(id)
@@ -104,13 +104,11 @@ class InvoiceService(
         return AvailableCurrenciesResponseDTO(list)
     }
 
-    fun mapToResponse(invoice: Invoice): InvoiceResponseDTO {
-        return InvoiceResponseDTO(
+    fun mapToResponse(invoice: Invoice): MerchantInvoiceResponseDTO {
+        return MerchantInvoiceResponseDTO(
             id = invoice.externalId,
             currency = currencyService.getById(invoice.currencyId).name,
             amount = invoice.amount,
-            successUrl = invoice.successUrl,
-            failUrl = invoice.failUrl,
             paymentUrl = "$widgetUrl${invoice.externalId}"
         )
     }

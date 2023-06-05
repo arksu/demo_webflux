@@ -1,12 +1,51 @@
 package com.example.demowebflux.controller.dto
 
+import com.example.jooq.enums.OrderStatusType
 import java.math.BigDecimal
 
 data class InvoiceResponseDTO(
-    val id: String,
-    val currency: String,
-    val amount: BigDecimal,
-    val successUrl: String,
-    val failUrl: String,
-    val paymentUrl: String,
+    /**
+     * внешний ид счета
+     */
+    val invoiceId: String,
+
+    /**
+     * статус счета (сделки) (NEW - если еще не выбрали валюту)
+     */
+    val status: OrderStatusType,
+
+    /**
+     * сумма по счету
+     */
+    val invoiceAmount: BigDecimal,
+
+    /**
+     * валюта по счету (которую хочет мерчант)
+     */
+    val invoiceCurrency: String,
+
+    /**
+     * куда надо перевести деньги клиенту
+     */
+    val walletAddress: String?,
+
+    /**
+     * валюта в которой происходит оплата клиентом
+     */
+    val currency: String?,
+
+    /**
+     * полная сумма сделки
+     */
+    val amount: BigDecimal?,
+
+    /**
+     * какую сумму, полученную от клиента уже увидела система
+     */
+    val amountReceived: BigDecimal?,
+
+    /**
+     * сколько осталось перевести клиенту для завершения сделки
+     */
+    val amountPending: BigDecimal?,
 )

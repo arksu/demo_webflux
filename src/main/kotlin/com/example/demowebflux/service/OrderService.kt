@@ -1,7 +1,8 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
-import com.example.demowebflux.controller.dto.OrderResponseDTO
+import com.example.demowebflux.controller.dto.InvoiceResponseDTO
+import com.example.demowebflux.converter.InvoiceDTOConverter
 import com.example.demowebflux.exception.BadRequestException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
 import com.example.demowebflux.exception.NoFreeWalletException
@@ -33,6 +34,7 @@ class OrderService(
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
+    private val invoiceDTOConverter: InvoiceDTOConverter,
 
     @Value("\${app.decimalScale}")
     private val scale: Int
@@ -42,7 +44,7 @@ class OrderService(
     /**
      * клиент выбрал валюту, запускаем сделку, выбираем кошелек под эту валюту
      */
-    suspend fun startOrder(request: CreateOrderRequestDTO): OrderResponseDTO {
+    suspend fun startOrder(request: CreateOrderRequestDTO): InvoiceResponseDTO {
         val targetCurrency = currencyService.getByName(request.selectedCurrency)
 
         return dslContext.transactionCoroutine { trx ->
@@ -119,35 +121,26 @@ class OrderService(
             wallet.orderId = saved.id
             blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
 
-            OrderResponseDTO(
-                invoiceId = invoice.externalId,
-                walletAddress = wallet.address,
-                currency = targetCurrency.name,
-                amount = saved.customerAmount,
-                amountReceived = saved.customerAmountReceived,
-                amountPending = saved.customerAmountPending
-            )
+            invoiceDTOConverter.toInvoiceResponseDTO(invoice, saved, wallet)
         }
     }
 
-    suspend fun getByInvoiceExternalId(invoiceExternalId: String): OrderResponseDTO {
+    suspend fun getByExternalId(invoiceExternalId: String): InvoiceResponseDTO {
         val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(invoiceExternalId, dslContext).awaitSingleOrNull()
             ?: throw InvoiceNotFoundOrLockedException(invoiceExternalId)
 
-        if (invoice.status != InvoiceStatusType.PROCESSING) {
-            throw UnprocessableEntityException("Wrong invoice status")
+        @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+        return when (invoice.status) {
+            InvoiceStatusType.NEW -> {
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
+            }
+
+            InvoiceStatusType.PROCESSING, InvoiceStatusType.TERMINATED -> {
+                val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
+                val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
+
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, order, wallet)
+            }
         }
-        val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
-
-        val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
-
-        return OrderResponseDTO(
-            invoiceId = invoice.externalId,
-            walletAddress = wallet.address,
-            currency = currencyService.getById(order.selectedCurrencyId).name,
-            amount = order.customerAmount,
-            amountReceived = order.customerAmountReceived,
-            amountPending = order.customerAmountPending
-        )
     }
 }

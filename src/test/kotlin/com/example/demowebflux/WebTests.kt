@@ -2,8 +2,8 @@ package com.example.demowebflux
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
+import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
-import com.example.demowebflux.controller.dto.OrderResponseDTO
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.MerchantRepo
@@ -219,14 +219,14 @@ class WebTests(
             .expectStatus().isEqualTo(HttpStatus.CONFLICT)
     }
 
-    fun createInvoice(request: InvoiceRequestDTO): InvoiceResponseDTO {
+    fun createInvoice(request: InvoiceRequestDTO): MerchantInvoiceResponseDTO {
         val result = webClient.post()
             .uri("/invoice")
             .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(request))
             .exchange()
             .expectStatus().isCreated
-            .returnResult(InvoiceResponseDTO::class.java)
+            .returnResult(MerchantInvoiceResponseDTO::class.java)
             .responseBody
 
         val response = runBlocking {
@@ -235,14 +235,14 @@ class WebTests(
         return response
     }
 
-    fun createOrder(request: CreateOrderRequestDTO): OrderResponseDTO {
+    fun createOrder(request: CreateOrderRequestDTO): InvoiceResponseDTO {
         val result = webClient.post()
             .uri("/order")
             .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(request))
             .exchange()
             .expectStatus().isCreated
-            .returnResult(OrderResponseDTO::class.java)
+            .returnResult(InvoiceResponseDTO::class.java)
             .responseBody
 
         val response = runBlocking {
@@ -270,7 +270,7 @@ class WebTests(
         sum: BigDecimal = BigDecimal(100),
         commissionType: CommissionType = CommissionType.CLIENT,
         selectedCurrency: String = defaultCurrency
-    ): OrderResponseDTO {
+    ): InvoiceResponseDTO {
         val wallet = createFreeWallet(defaultCurrency)
 
         val invoiceRequest = InvoiceRequestDTO(

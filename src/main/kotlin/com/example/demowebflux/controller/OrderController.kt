@@ -1,7 +1,7 @@
 package com.example.demowebflux.controller
 
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
-import com.example.demowebflux.controller.dto.OrderResponseDTO
+import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -17,7 +17,7 @@ class OrderController(
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    suspend fun start(@RequestBody @Valid request: CreateOrderRequestDTO): OrderResponseDTO {
+    suspend fun start(@RequestBody @Valid request: CreateOrderRequestDTO): InvoiceResponseDTO {
         return orderService.startOrder(request)
     }
 }
