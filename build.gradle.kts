@@ -10,7 +10,7 @@ plugins {
     id("org.springframework.boot") version springVersion
     id("io.spring.dependency-management") version "1.1.0" // https://plugins.gradle.org/plugin/io.spring.dependency-management
     id("org.flywaydb.flyway") version "9.18.0" // https://plugins.gradle.org/plugin/org.flywaydb.flyway
-    id("nu.studer.jooq") version "8.2" // https://plugins.gradle.org/plugin/nu.studer.jooq
+    id("nu.studer.jooq") version "8.2.1" // https://plugins.gradle.org/plugin/nu.studer.jooq
 }
 
 group = "com.example"

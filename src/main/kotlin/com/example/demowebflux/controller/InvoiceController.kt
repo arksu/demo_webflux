@@ -2,10 +2,9 @@ package com.example.demowebflux.controller
 
 import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
-import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
+import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.service.InvoiceService
-import com.example.demowebflux.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/invoice")
 class InvoiceController(
     private val invoiceService: InvoiceService,
-    private val orderService: OrderService,
 ) {
 
     /**
@@ -40,6 +38,6 @@ class InvoiceController(
     suspend fun get(
         @PathVariable id: String
     ): InvoiceResponseDTO {
-        return orderService.getByExternalId(id)
+        return invoiceService.getByExternalId(id)
     }
 }

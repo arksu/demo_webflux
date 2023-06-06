@@ -2,10 +2,15 @@ package com.example.demowebflux.service
 
 import com.example.demowebflux.controller.dto.AvailableCurrenciesResponseDTO
 import com.example.demowebflux.controller.dto.InvoiceRequestDTO
+import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
+import com.example.demowebflux.converter.InvoiceDTOConverter
 import com.example.demowebflux.exception.InvoiceAlreadyExists
+import com.example.demowebflux.exception.InvoiceNotFoundException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
+import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
+import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.randomStringByKotlinRandom
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.tables.pojos.Invoice
@@ -26,6 +31,10 @@ class InvoiceService(
     private val exchangeRateService: ExchangeRateService,
     private val invoiceRepo: InvoiceRepo,
     private val shopService: ShopService,
+    private val orderRepo: OrderRepo,
+    private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
+    private val invoiceDTOConverter: InvoiceDTOConverter,
+
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
     @Value("\${app.widgetUrl}")
@@ -99,6 +108,25 @@ class InvoiceService(
                 )
             }
         return AvailableCurrenciesResponseDTO(list)
+    }
+
+    suspend fun getByExternalId(invoiceExternalId: String): InvoiceResponseDTO {
+        val invoice = invoiceRepo.findByExternalId(invoiceExternalId, dslContext).awaitSingleOrNull()
+            ?: throw InvoiceNotFoundException(invoiceExternalId)
+
+        @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+        return when (invoice.status) {
+            InvoiceStatusType.NEW -> {
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
+            }
+
+            InvoiceStatusType.PROCESSING, InvoiceStatusType.TERMINATED -> {
+                val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
+                val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
+
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, order, wallet)
+            }
+        }
     }
 
     fun mapToResponse(invoice: Invoice): MerchantInvoiceResponseDTO {

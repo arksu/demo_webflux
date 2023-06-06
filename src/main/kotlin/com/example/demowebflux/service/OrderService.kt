@@ -78,7 +78,7 @@ class OrderService(
                 ?: throw BadRequestException("Incorrect selected currency, try other")
 
             val new = Order()
-            new.status = OrderStatusType.NEW
+            new.status = OrderStatusType.PENDING
             new.invoiceId = invoice.id
 
             // эталонная сумма сделки в валюте которую выбрал клиент, от которой идет расчет (invoice.amount -> exchange_rate[selected_currency_id])
@@ -124,25 +124,6 @@ class OrderService(
             blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
 
             invoiceDTOConverter.toInvoiceResponseDTO(invoice, saved, wallet)
-        }
-    }
-
-    suspend fun getByExternalId(invoiceExternalId: String): InvoiceResponseDTO {
-        val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(invoiceExternalId, dslContext).awaitSingleOrNull()
-            ?: throw InvoiceNotFoundOrLockedException(invoiceExternalId)
-
-        @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
-        return when (invoice.status) {
-            InvoiceStatusType.NEW -> {
-                invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
-            }
-
-            InvoiceStatusType.PROCESSING, InvoiceStatusType.TERMINATED -> {
-                val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
-                val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
-
-                invoiceDTOConverter.toInvoiceResponseDTO(invoice, order, wallet)
-            }
         }
     }
 }

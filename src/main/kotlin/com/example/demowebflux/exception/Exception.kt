@@ -48,5 +48,12 @@ class InvoiceNotFoundOrLockedException(
     val id: String
 ) : AppException("Invoice $id is not found")
 
+@ResponseStatus(HttpStatus.NOT_FOUND)
+class InvoiceNotFoundException(
+    @ResponseErrorProperty
+    val id: String
+) : AppException("Invoice $id is not found")
+
+
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class NoFreeWalletException : AppException("No free wallet now, please try later")
