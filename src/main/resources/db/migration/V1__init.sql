@@ -154,14 +154,3 @@ insert into blockchain_income_wallet (address, currency_id, order_id)
 values ('test_address1', 3, null);
 values ('test_address2', 4, null);
 values ('test_address3', 5, null);
-
--- debug
-create table if not exists account
-(
-    id          uuid default gen_random_uuid() primary key,
-    name        varchar(255),
-    description text
-);
-insert into account(id, name, description)
-VALUES ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d7', 'foo', 'bar'),
-       ('a1f18428-cc07-4c4b-8cb2-bbf86ce8d6d2', 'fo22o', 'b22ar');

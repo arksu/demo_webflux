@@ -295,7 +295,7 @@ class WebTests(
 
             // убедимся что созданный заказ есть в базе
             val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
-            assertEquals(order.status, OrderStatusType.NEW)
+            assertEquals(order.status, OrderStatusType.PENDING)
 
             // а также что наш кошелек заблокировался
             val updatedWallet = blockchainIncomeWalletRepo.findById(wallet.id, dslContext).awaitSingle()
