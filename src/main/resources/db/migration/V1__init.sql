@@ -123,6 +123,14 @@ create table if not exists "order"
     created                    timestamp with time zone not null default now()
 );
 
+create table if not exists order_operation_log
+(
+    order_id    uuid                     not null references "order" (id),
+    from_status order_status_type        not null,
+    to_status   order_status_type        not null,
+    created     timestamp with time zone not null default now()
+);
+
 -- пул кошельков на который будем принимать средства от клиента
 create table if not exists blockchain_income_wallet
 (
