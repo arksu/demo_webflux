@@ -2,8 +2,10 @@ package com.example.demowebflux.scheduler
 
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.service.CurrencyService
+import com.example.demowebflux.service.ExchangeRateService
 import com.example.jooq.enums.BlockchainType
 import jakarta.annotation.PostConstruct
+import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
 import org.springframework.context.annotation.DependsOn
 import org.springframework.scheduling.annotation.Scheduled
@@ -15,6 +17,7 @@ class TronScheduler(
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
     private val currencyService: CurrencyService,
     private val dslContext: DSLContext,
+    private val exchangeRateService: ExchangeRateService,
 ) {
     val nileCurrencies: MutableList<Int> = ArrayList()
     val shastaCurrencies: MutableList<Int> = ArrayList()
@@ -36,8 +39,12 @@ class TronScheduler(
         })
     }
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 5000)
     fun update() {
+        runBlocking {
+            exchangeRateService.getRatesFromBinance()
+        }
+
         // найдем занятые кошельки по трону
         blockchainIncomeWalletRepo
             .findIsBusy(nileCurrencies, dslContext)

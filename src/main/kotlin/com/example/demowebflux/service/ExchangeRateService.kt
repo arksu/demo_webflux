@@ -3,14 +3,31 @@ package com.example.demowebflux.service
 import com.example.jooq.tables.pojos.Currency
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.ExchangeStrategies
+import org.springframework.web.reactive.function.client.WebClient
+import reactor.util.retry.Retry
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Duration
 
 @Service
 class ExchangeRateService(
     @Value("\${app.decimalScale:8}")
-    private val decimalScale: Int
+    private val decimalScale: Int,
 ) {
+    private val webClient = WebClient
+        .builder()
+        .exchangeStrategies(
+            ExchangeStrategies.builder()
+                .codecs {
+                    it.defaultCodecs()
+                        .maxInMemorySize(2 * 1024 * 1024)
+                }
+                .build()
+        )
+        .baseUrl("https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products")
+        .build()
+
     /**
      * получить курс перевода валюты FROM в валюту TO
      * берем FROM * rate = TO
@@ -30,4 +47,44 @@ class ExchangeRateService(
         return BigDecimal("2.452").setScale(decimalScale, RoundingMode.HALF_UP)
 //        return BigDecimal.ONE
     }
+
+    fun getRatesFromBinance(): BinanceRateResponse? {
+        val dto = webClient
+            .get()
+            .retrieve()
+            .bodyToMono(BinanceRateResponse::class.java)
+            .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(1)))
+            .block()
+
+        if (dto != null) {
+            val map = dto.data.map {
+                it.s to it.c
+            }.toMap()
+            val rate = map["TRXUSDT"]
+            println(rate)
+        }
+        return dto
+    }
+
+    data class BinanceRateResponse(
+        val data: List<BinanceRateData>,
+        val success: Boolean
+    )
+
+    data class BinanceRateData(
+        val s: String,
+        val st: String,
+        val b: String,
+        val q: String,
+        val an: String,
+        val qn: String,
+        val pm: String,
+        val pn: String,
+        val o: BigDecimal,
+        val h: BigDecimal,
+        val l: BigDecimal,
+        val c: BigDecimal,
+        val v: BigDecimal,
+        val qv: BigDecimal,
+    )
 }

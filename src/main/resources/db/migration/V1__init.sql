@@ -60,6 +60,7 @@ create table if not exists shop
 
 create type invoice_status_type as enum ('NEW', 'PROCESSING', 'TERMINATED');
 
+-- счет от мерчанта (намерение о совершении сделки)
 create table if not exists invoice
 (
     id                uuid                              default gen_random_uuid() not null primary key,
@@ -90,6 +91,7 @@ create table if not exists invoice
 
 create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'MISMATCH', 'NOT_ENOUGH');
 
+-- заказы сделанные на основе счета
 create table if not exists "order"
 (
     id                         uuid                              default gen_random_uuid() not null primary key,
@@ -123,12 +125,16 @@ create table if not exists "order"
     created                    timestamp with time zone not null default now()
 );
 
+-- храним все обновления ордеров тут
 create table if not exists order_operation_log
 (
-    order_id    uuid                     not null references "order" (id),
-    from_status order_status_type        not null,
-    to_status   order_status_type        not null,
-    created     timestamp with time zone not null default now()
+    order_id                 uuid                     not null references "order" (id),
+    from_status              order_status_type        not null,
+    to_status                order_status_type        not null,
+    customer_amount          decimal                  not null check ( customer_amount > 0 ),
+    customer_amount_received decimal                  not null check ( customer_amount_received >= 0 ),
+    customer_amount_pending  decimal                  not null check ( customer_amount_pending >= 0 ),
+    created                  timestamp with time zone not null default now()
 );
 
 -- пул кошельков на который будем принимать средства от клиента

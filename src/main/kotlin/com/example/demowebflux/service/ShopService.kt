@@ -9,6 +9,9 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Service
 import java.util.*
 
+/**
+ * магазины мерчанта
+ */
 @Service
 class ShopService(
     private val shopRepo: ShopRepo

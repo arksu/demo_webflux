@@ -18,3 +18,4 @@ check wallet trx amount ->
     equal order amount -> complete order
     overpaid -> complete order, alert support
     less than required -> ignore trx, wallet hold as waited
+

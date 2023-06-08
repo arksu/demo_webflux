@@ -9,11 +9,13 @@ import com.example.demowebflux.exception.NoFreeWalletException
 import com.example.demowebflux.exception.UnprocessableEntityException
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
+import com.example.demowebflux.repo.OrderOperationLogRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
+import com.example.jooq.tables.pojos.OrderOperationLog
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
@@ -35,6 +37,7 @@ class OrderService(
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
+    private val orderOperationLogRepo: OrderOperationLogRepo,
     private val invoiceDTOConverter: InvoiceDTOConverter,
 
     @Value("\${app.decimalScale}")
@@ -118,6 +121,8 @@ class OrderService(
 
             // сохраняем ордер в базу
             val saved = orderRepo.save(new, trx.dsl()).awaitSingle()
+            // сохраним в историю состояний ордера
+            saveLog(OrderStatusType.NEW, saved, trx.dsl())
 
             // занимаем кошелек
             wallet.orderId = saved.id
@@ -126,4 +131,20 @@ class OrderService(
             invoiceDTOConverter.toInvoiceResponseDTO(invoice, saved, wallet)
         }
     }
+
+    suspend fun saveLog(fromStatus: OrderStatusType, order: Order, context: DSLContext) {
+        orderOperationLogRepo.save(
+            OrderOperationLog().let {
+                it.orderId = order.id
+                it.fromStatus = fromStatus
+                it.toStatus = order.status
+                it.customerAmount = order.customerAmount
+                it.customerAmountPending = order.customerAmountPending
+                it.customerAmountReceived = order.customerAmountReceived
+                it
+            },
+            context
+        ).awaitSingle()
+    }
+
 }
