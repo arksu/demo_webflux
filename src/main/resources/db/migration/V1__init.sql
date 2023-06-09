@@ -157,6 +157,15 @@ create table if not exists blockchain_income_wallet
     unique (address, currency_id)
 );
 
+-- актуальный курс валют
+create table if not exists rate
+(
+    id      bigserial,
+    name    varchar(32)              not null,
+    rate    decimal                  not null,
+    created timestamp with time zone not null default now()
+);
+
 -- test data
 insert into merchant(id, login, email, commission)
 values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);

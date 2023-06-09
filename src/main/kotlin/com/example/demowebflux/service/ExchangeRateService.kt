@@ -2,6 +2,7 @@ package com.example.demowebflux.service
 
 import com.example.jooq.tables.pojos.Currency
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
@@ -14,6 +15,9 @@ import java.time.Duration
 class ExchangeRateService(
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
+
+    @Value("\${app.rates.supported}")
+    private val supportedList: List<String>
 ) {
     private val webClient = WebClient
         .builder()
@@ -48,22 +52,27 @@ class ExchangeRateService(
 //        return BigDecimal.ONE
     }
 
+    @Scheduled(fixedDelayString = "\${app.rates.updateInterval}")
+    fun updateBinance() {
+        val dto = getRatesFromBinance()
+        if (dto != null) {
+            val map = dto.data.associate { it.s to it.c }
+            supportedList.forEach {
+                val rate = map[it]
+                if (rate != null) {
+                    println("$it=$rate")
+                }
+            }
+        }
+    }
+
     fun getRatesFromBinance(): BinanceRateResponse? {
-        val dto = webClient
+        return webClient
             .get()
             .retrieve()
             .bodyToMono(BinanceRateResponse::class.java)
             .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(1)))
             .block()
-
-        if (dto != null) {
-            val map = dto.data.map {
-                it.s to it.c
-            }.toMap()
-            val rate = map["TRXUSDT"]
-            println(rate)
-        }
-        return dto
     }
 
     data class BinanceRateResponse(

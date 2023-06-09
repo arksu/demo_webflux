@@ -29,6 +29,10 @@ logging:
 app:
   decimalScale: 8 # до скольки знаков после запятой округляем значения
   widgetUrl: ${WIDGET_URL:http://localhost:8047/invoice/}
+  rates:
+    lifetime: 30000 # время жизни последнего полученного курса. дольше этого срока если не получили курса - считаем что курса нет
+    updateInterval: 5000 # время между запросами курса с биржи
+    supported: TRXUSDT, ETHUSDT # пары, которые запрашиваем с биржи
   trongrid:
     apikey: ${TRONGRID_API_KEY}
     host:
