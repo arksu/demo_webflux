@@ -1,6 +1,10 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.repo.RateRepo
+import com.example.jooq.enums.RateSource
 import com.example.jooq.tables.pojos.Currency
+import com.example.jooq.tables.pojos.Rate
+import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -16,9 +20,16 @@ class ExchangeRateService(
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
 
+    @Value("\${app.rates.lifetime:30000}")
+    private val lifetime: Int,
+
     @Value("\${app.rates.supported}")
-    private val supportedList: List<String>
+    private val supportedList: List<String>,
+
+    private val rateRepo: RateRepo,
+    private val dslContext: DSLContext,
 ) {
+
     private val webClient = WebClient
         .builder()
         .exchangeStrategies(
@@ -58,9 +69,13 @@ class ExchangeRateService(
         if (dto != null) {
             val map = dto.data.associate { it.s to it.c }
             supportedList.forEach {
-                val rate = map[it]
-                if (rate != null) {
-                    println("$it=$rate")
+                val rateValue = map[it]
+                if (rateValue != null) {
+                    val rate = Rate()
+                    rate.rate = rateValue
+                    rate.name = it
+                    rate.source = RateSource.BINANCE
+                    rateRepo.save(rate, dslContext).block()
                 }
             }
         }

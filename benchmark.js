@@ -89,11 +89,11 @@ function debug_delay2() {
 
 // Simulated user behavior
 export default function () {
-    // let invoiceId = createInvoice()
+    let invoiceId = createInvoice()
     // sleep(0.2);
     // createOrder(invoiceId)
     // createOrder("13bcbbe2-c82c-410d-8057-44c219a0a04e")
 
-    debug_delay()
+    // debug_delay()
     // debug_delay2()
 }

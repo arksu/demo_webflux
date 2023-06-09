@@ -157,12 +157,14 @@ create table if not exists blockchain_income_wallet
     unique (address, currency_id)
 );
 
+create type rate_source as enum ('BINANCE');
 -- актуальный курс валют
 create table if not exists rate
 (
     id      bigserial,
     name    varchar(32)              not null,
     rate    decimal                  not null,
+    source  rate_source              not null,
     created timestamp with time zone not null default now()
 );
 
