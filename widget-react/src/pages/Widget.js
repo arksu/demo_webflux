@@ -107,7 +107,7 @@ function Widget() {
             const list = availableCurrencies ? availableCurrencies.list.map(v =>
                 <div key={v.name} className="d-grid gap-2">
                     <Button className="mb-2" disabled={sendingSelectCurrency}
-                            onClick={() => selectCurrency(v.name)}>{v.name} : {v.amount}
+                            onClick={() => selectCurrency(v.name)}>{v.amount} {v.name}
                     </Button>
                 </div>
             ) : null
@@ -130,7 +130,7 @@ function Widget() {
                     </Row></>}
                 {availableCurrencies &&
                     <>
-                        <Row className="text-center">
+                        <Row className="text-center mb-3">
                             <Col>
                                 Please select a currency to pay
                             </Col>
