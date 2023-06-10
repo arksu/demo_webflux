@@ -17,6 +17,7 @@ import './index.css';
 import ErrorPage from "./ErrorPage";
 import Widget from "./pages/Widget";
 import i18n from "./i18n";
+import {Col, Container, Row} from "react-bootstrap";
 
 const router = createBrowserRouter([
         {
@@ -46,7 +47,14 @@ root.render(
     <I18nextProvider i18n={i18n}>
         <ToastContainer/>
         <div className="main">
-            <RouterProvider router={router}/>
+            <Container>
+                <Row className="justify-content-center">
+                    <Col xs={9} sm={8} md={6} lg={5} xl={4} xxl={3}
+                         className="shadow-lg border border-primary widget-container-row text-center">
+                        <RouterProvider router={router}/>
+                    </Col>
+                </Row>
+            </Container>
         </div>
     </I18nextProvider>
     // </React.StrictMode>

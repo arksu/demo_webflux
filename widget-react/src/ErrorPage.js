@@ -2,9 +2,7 @@ function ErrorPage() {
 
     return (
         <div>
-            <div>
-                Page not found
-            </div>
+            Page not found
         </div>
     );
 }

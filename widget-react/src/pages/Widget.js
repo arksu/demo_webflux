@@ -71,11 +71,14 @@ function Widget() {
     }, [id]);
 
     if (error) {
-        return <div>Error: {error}</div>;
+        return <div>
+            Error: {error}
+        </div>;
     }
     if (!invoice) {
-        return <div>Loading...
-            <Spinner size="sm" animation="border" role="status"/>
+        return <div>
+            <Spinner size="sm" animation="border" role="status" className="me-2"/>
+            Loading...
         </div>
     }
 
@@ -168,38 +171,33 @@ function Widget() {
         }
     }
 
-    return <Container>
-        <Row className="justify-content-center">
-            <Col xs={9} sm={8} md={6} lg={5} xl={4} xxl={3}
-                 className="shadow-lg border border-primary widget-container-row">
-                <Row>
-                    <Col>
-                        Waiting payment...
-                    </Col>
-                    <Col className="text-end fw-bold">
-                        00:12:54
-                    </Col>
-                </Row>
-                <hr/>
-                {getWidget()}
-                <hr/>
-                <Row className="align-items-center">
-                    <Col>
-                        <Link to="">Help link</Link>
-                    </Col>
-                    <Col className="text-end">
-                        <Dropdown drop="up" align="end">
-                            <Dropdown.Toggle dir="down">EN</Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                <Dropdown.Item>EN</Dropdown.Item>
-                                <Dropdown.Item>RU</Dropdown.Item>
-                            </Dropdown.Menu>
-                        </Dropdown>
-                    </Col>
-                </Row>
+    return <>
+        <Row>
+            <Col>
+                Waiting payment...
+            </Col>
+            <Col className="text-end fw-bold">
+                00:12:54
             </Col>
         </Row>
-    </Container>
+        <hr/>
+        {getWidget()}
+        <hr/>
+        <Row className="align-items-center">
+            <Col>
+                <Link to="">Help link</Link>
+            </Col>
+            <Col className="text-end">
+                <Dropdown drop="up" align="end">
+                    <Dropdown.Toggle dir="down">EN</Dropdown.Toggle>
+                    <Dropdown.Menu>
+                        <Dropdown.Item>EN</Dropdown.Item>
+                        <Dropdown.Item>RU</Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </Col>
+        </Row>
+    </>
 }
 
 export default Widget
