@@ -1,9 +1,11 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.exception.NoActualRateException
 import com.example.demowebflux.repo.RateRepo
 import com.example.jooq.enums.RateSource
 import com.example.jooq.tables.pojos.Currency
 import com.example.jooq.tables.pojos.Rate
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
@@ -14,14 +16,15 @@ import reactor.util.retry.Retry
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
+import java.time.OffsetDateTime
 
 @Service
 class ExchangeRateService(
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
 
-    @Value("\${app.rates.lifetime:30000}")
-    private val lifetime: Int,
+    @Value("\${app.rates.lifetimeSeconds:30}")
+    private val lifetimeSeconds: Long,
 
     @Value("\${app.rates.supported}")
     private val supportedList: List<String>,
@@ -57,10 +60,26 @@ class ExchangeRateService(
 
         if (from.name == "USDD-TRC20-NILE") return null
 
+        val now = OffsetDateTime.now()
+        val rate = rateRepo.findLastByName("${from.name.toRateName()}${to.name.toRateName()}", dslContext).awaitSingleOrNull()
+        if (rate != null) {
+            return if (rate.created.isBefore(now.minusSeconds(lifetimeSeconds))) {
+                throw NoActualRateException("${from.name.toRateName()}${to.name.toRateName()}")
+            } else rate.rate
+        } else {
+            val reverted = rateRepo.findLastByName("${to.name.toRateName()}${from.name.toRateName()}", dslContext).awaitSingleOrNull()
+                ?: return null
+            val r = if (reverted.created.isBefore(now.minusSeconds(lifetimeSeconds))) {
+                throw NoActualRateException("${to.name.toRateName()}${from.name.toRateName()}")
+            } else reverted.rate
+            return BigDecimal.ONE.divide(r, decimalScale, RoundingMode.HALF_UP)
+        }
+    }
 
-        // TODO
-        return BigDecimal("2.452").setScale(decimalScale, RoundingMode.HALF_UP)
-//        return BigDecimal.ONE
+    fun String.toRateName(): String {
+        if (this.startsWith("USDT-")) return "USDT"
+        if (this.startsWith("TRX-")) return "TRX"
+        return this
     }
 
     @Scheduled(fixedDelayString = "\${app.rates.updateInterval}")

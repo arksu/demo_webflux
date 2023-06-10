@@ -18,4 +18,13 @@ class RateRepo {
             .toMono()
             .map(::Rate)
     }
+
+    fun findLastByName(name : String, context: DSLContext) : Mono<Rate> {
+        return context.selectFrom(RATE)
+            .where(RATE.NAME.eq(name))
+            .orderBy(RATE.ID.desc())
+            .limit(1)
+            .toMono()
+            .map(::Rate)
+    }
 }

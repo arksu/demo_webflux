@@ -55,5 +55,11 @@ class InvoiceNotFoundException(
 ) : AppException("Invoice $id is not found")
 
 
+@ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+class NoActualRateException(
+    @ResponseErrorProperty
+    val pair: String
+) : AppException("No actual rate")
+
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class NoFreeWalletException : AppException("No free wallet now, please try later")
