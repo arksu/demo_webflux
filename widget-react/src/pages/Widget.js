@@ -6,6 +6,8 @@ import {useEffect, useState} from "react";
 import {getApiErrorText, handleApiError, showError} from "../utils/apiUtils";
 import {useTranslation} from "react-i18next";
 import QRCode from "react-qr-code";
+import CooldownTimer from "../components/CooldownTimer";
+import Countdown from "react-countdown";
 
 function Widget() {
     let {id} = useParams()
@@ -14,26 +16,37 @@ function Widget() {
     const [availableCurrencies, setAvailableCurrencies] = useState(null);
     const [error, setError] = useState(null);
     const [sendingSelectCurrency, setSendingSelectCurrency] = useState(false)
-    const [pendingTimer, setPendingTimer] = useState(undefined)
+    const [startTimer, setStartTimer] = useState(false);
 
-    function startPendingTimer() {
-        console.log("startPendingTimer")
-        if (pendingTimer) {
-            clearInterval(pendingTimer)
-            setPendingTimer(undefined)
+    // const startPendingTimer = function () {
+    //     console.log("startPendingTimer")
+    //     let timer = setInterval(tick, 1000)
+    //     return () => {
+    //         clearInterval(timer)
+    //     }
+    // }
+
+    useEffect(() => {
+        // если счет в ожидании оплаты - надо запустить таймер
+        if (invoice && invoice.status !== 'EXPIRED') {
+            console.log("start timer")
+            let timer = setInterval(tick, 1000)
+            return () => {
+                clearInterval(timer)
+            }
         }
-        let timer = setInterval(() => {
-            // тут логика подсчета оставшегося времени на оплату
-            console.log("timer")
-        }, 1000)
-        setPendingTimer(timer)
+    }, [invoice])
+
+    const tick = function () {
+        console.log("timer", invoice)
     }
 
     useEffect(() => {
+
         const fetchAvailableCurrencies = async () => {
             try {
                 const response = await axios.get(`${process.env.REACT_APP_API_URL}/invoice/${id}/available`);
-                console.log("list", response.data)
+                console.log("currencies list", response.data)
                 setAvailableCurrencies(response.data)
             } catch (error) {
                 handleApiError(error)
@@ -53,10 +66,6 @@ function Widget() {
                 }
                 console.log(response.data)
                 setInvoice(response.data)
-                // если счет в ожидании оплаты - надо запустить таймер
-                if (response.data.status === 'PENDING' || response.data.status === 'NOT_ENOUGH') {
-                    startPendingTimer()
-                }
             } catch (error) {
                 setError(getApiErrorText(error))
             }
@@ -65,9 +74,13 @@ function Widget() {
         console.log("call fetchInvoice")
 
         // TODO debug
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
             fetchInvoice();
         }, 300)
+
+        return () => {
+            clearTimeout(timeout)
+        }
     }, [id]);
 
     if (error) {
@@ -93,7 +106,7 @@ function Widget() {
             });
             console.log(response.data)
             setInvoice(response.data)
-            startPendingTimer()
+            // startPendingTimer()
         } catch (error) {
             if (error.response && error.response.data.code === 'NO_FREE_WALLET') {
                 showError(error.response.data.message)
@@ -177,14 +190,15 @@ function Widget() {
                 Waiting payment...
             </Col>
             <Col className="text-end fw-bold">
-                00:12:54
+                <Countdown date={invoice.deadline} daysInHours={true}/>
+                {/*<CooldownTimer deadline={invoice.deadline}/>*/}
             </Col>
         </Row>
         <hr/>
         {getWidget()}
         <hr/>
         <Row className="align-items-center">
-            <Col>
+            <Col className="text-start">
                 <Link to="">Help link</Link>
             </Col>
             <Col className="text-end">

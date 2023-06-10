@@ -25,7 +25,7 @@ class InvoiceDTOConverter(
             invoiceAmount = invoice.amount,
             invoiceCurrency = currencyService.getById(invoice.currencyId).name,
             shopName = shop.name,
-            deadline = invoice.deadline,
+            deadline = invoice.deadline.toString(),
             status = order?.status ?: OrderStatusType.NEW,
             walletAddress = wallet?.address,
             currency = currency?.name,
