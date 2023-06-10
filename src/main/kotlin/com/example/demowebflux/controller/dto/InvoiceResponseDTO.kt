@@ -2,6 +2,7 @@ package com.example.demowebflux.controller.dto
 
 import com.example.jooq.enums.OrderStatusType
 import java.math.BigDecimal
+import java.time.OffsetDateTime
 
 data class InvoiceResponseDTO(
     /**
@@ -13,6 +14,11 @@ data class InvoiceResponseDTO(
      * имя магазина мерчанта
      */
     val shopName: String,
+
+    /**
+     * дата закрытия счета
+     */
+    val deadline: OffsetDateTime?,
 
     /**
      * статус счета (сделки) (NEW - если еще не выбрали валюту)

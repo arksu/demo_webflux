@@ -84,6 +84,9 @@ create table if not exists invoice
     fail_url          varchar(512)             not null,
     -- ключ который использовался при создании счета
     api_key           char(64)                 not null,
+    -- дата в которую протухает счет на оплату - закрываем его
+    deadline          timestamp with time zone not null,
+    -- дата создания счета на оплату
     created           timestamp with time zone not null default now(),
     -- в пределах мерчанта order id должен быть уникален
     unique (shop_id, merchant_order_id)
@@ -176,6 +179,6 @@ insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_m
 values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT', 35, 0.02);
 
 insert into blockchain_income_wallet (address, currency_id, order_id)
-values ('test_address1', 3, null);
-values ('test_address2', 4, null);
-values ('test_address3', 5, null);
+values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 3, null);
+values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 4, null);
+values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 5, null);

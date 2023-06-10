@@ -105,25 +105,38 @@ function Widget() {
     function getWidget() {
         if (invoice.status === 'NEW') {
             const list = availableCurrencies ? availableCurrencies.list.map(v =>
-                <Row key={v.name}>
+                <div key={v.name} className="d-grid gap-2">
                     <Button className="mb-2" disabled={sendingSelectCurrency}
                             onClick={() => selectCurrency(v.name)}>{v.name} : {v.amount}
                     </Button>
-                </Row>
-            ) : <Spinner size="sm" animation="border" role="status"/>
+                </div>
+            ) : null
             return <>
-                <Row>
-                    <Col>
+                <Row className="mb-3">
+                    <Col xs={4} className="">
                         {invoice.shopName}
                     </Col>
-                    <Col>
+                    <Col xs={8} className="text-end fw-bold">
                         {invoice.invoiceAmount} {invoice.invoiceCurrency}
                     </Col>
                 </Row>
-                <p>Please select a currency to pay</p>
-                <Col>
-                    {list}
-                </Col>
+                {!availableCurrencies && <>
+
+                    <Row className="text-center">
+                        <Col>
+                            <Spinner size="lg" animation="border" role="status"/>
+                        </Col>
+
+                    </Row></>}
+                {availableCurrencies &&
+                    <>
+                        <Row className="text-center">
+                            <Col>
+                                Please select a currency to pay
+                            </Col>
+                        </Row>
+                        {list}
+                    </>}
             </>
 
         } else if (invoice.status === 'PENDING') {
@@ -171,15 +184,15 @@ function Widget() {
                 {getWidget()}
                 <hr/>
                 <Row className="align-items-center">
-                    <Col >
+                    <Col>
                         <Link to="">Help link</Link>
                     </Col>
                     <Col className="text-end">
                         <Dropdown drop="up" align="end">
                             <Dropdown.Toggle dir="down">EN</Dropdown.Toggle>
                             <Dropdown.Menu>
-                                <Dropdown.Item>RU</Dropdown.Item>
                                 <Dropdown.Item>EN</Dropdown.Item>
+                                <Dropdown.Item>RU</Dropdown.Item>
                             </Dropdown.Menu>
                         </Dropdown>
                     </Col>

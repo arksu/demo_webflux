@@ -21,6 +21,7 @@ import org.jooq.exception.IntegrityConstraintViolationException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.math.RoundingMode
+import java.time.OffsetDateTime
 
 @Service
 class InvoiceService(
@@ -57,6 +58,7 @@ class InvoiceService(
         new.failUrl = request.failUrl
         new.apiKey = request.apiKey
         new.externalId = randomStringByKotlinRandom(32)
+        new.deadline = OffsetDateTime.now().plusMinutes(shop.expireMinutes.toLong())
 
         try {
             return invoiceRepo.save(new, dslContext).awaitSingle()
@@ -88,7 +90,6 @@ class InvoiceService(
                 available == null || available.contains(it.id)
             }
             .map {
-                println(it)
                 val rate = exchangeRateService.getRate(
                     from = invoiceCurrency,
                     to = it,
