@@ -88,6 +88,7 @@ class InvoiceService(
                 available == null || available.contains(it.id)
             }
             .map {
+                println(it)
                 val rate = exchangeRateService.getRate(
                     from = invoiceCurrency,
                     to = it,

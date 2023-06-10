@@ -1,0 +1,17 @@
+{
+  "en": {
+    "main": {
+      "payment": "Payment",
+      "invoice": "Invoice",
+      "status": "Status",
+      "amount": "Amount",
+      "wait_amount": "Wait amount",
+      "address": "Address"
+    }
+  },
+  "ru": {
+    "main": {
+      "payment": "Платеж"
+    }
+  }
+}

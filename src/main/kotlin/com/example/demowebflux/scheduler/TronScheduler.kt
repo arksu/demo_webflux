@@ -17,7 +17,6 @@ class TronScheduler(
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
     private val currencyService: CurrencyService,
     private val dslContext: DSLContext,
-    private val exchangeRateService: ExchangeRateService,
 ) {
     val nileCurrencies: MutableList<Int> = ArrayList()
     val shastaCurrencies: MutableList<Int> = ArrayList()
@@ -39,12 +38,8 @@ class TronScheduler(
         })
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelayString = "\${app.trongrid.updateInterval}")
     fun update() {
-        runBlocking {
-            exchangeRateService.getRatesFromBinance()
-        }
-
         // найдем занятые кошельки по трону
         blockchainIncomeWalletRepo
             .findIsBusy(nileCurrencies, dslContext)

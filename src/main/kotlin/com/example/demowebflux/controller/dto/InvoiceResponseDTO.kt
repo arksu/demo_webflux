@@ -10,6 +10,11 @@ data class InvoiceResponseDTO(
     val invoiceId: String,
 
     /**
+     * имя магазина мерчанта
+     */
+    val shopName: String,
+
+    /**
      * статус счета (сделки) (NEW - если еще не выбрали валюту)
      */
     val status: OrderStatusType,

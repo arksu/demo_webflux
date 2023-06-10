@@ -20,6 +20,7 @@ class RateRepo {
     }
 
     fun findLastByName(name : String, context: DSLContext) : Mono<Rate> {
+        println("get rate $name")
         return context.selectFrom(RATE)
             .where(RATE.NAME.eq(name))
             .orderBy(RATE.ID.desc())

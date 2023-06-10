@@ -62,4 +62,4 @@ class NoActualRateException(
 ) : AppException("No actual rate")
 
 @ResponseStatus(HttpStatus.BAD_REQUEST)
-class NoFreeWalletException : AppException("No free wallet now, please try later")
+class NoFreeWalletException : AppException("No free wallet now, please try again later")

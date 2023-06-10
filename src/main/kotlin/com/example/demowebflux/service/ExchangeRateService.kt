@@ -58,19 +58,23 @@ class ExchangeRateService(
         // надо учесть дату последнего обновления курса в кэше
         // если курс протух то обязательно ждем актуальный курс, либо кидаем ошибку
 
-        if (from.name == "USDD-TRC20-NILE") return null
+        val fromName = from.name.toRateName()
+        val toName = to.name.toRateName()
+        if (fromName.equals(toName, ignoreCase = true)) return BigDecimal.ONE
 
+        val pair1 = "$fromName$toName"
+        val pair2 = "$toName$fromName"
         val now = OffsetDateTime.now()
-        val rate = rateRepo.findLastByName("${from.name.toRateName()}${to.name.toRateName()}", dslContext).awaitSingleOrNull()
+        val rate = rateRepo.findLastByName(pair1, dslContext).awaitSingleOrNull()
         if (rate != null) {
             return if (rate.created.isBefore(now.minusSeconds(lifetimeSeconds))) {
-                throw NoActualRateException("${from.name.toRateName()}${to.name.toRateName()}")
+                throw NoActualRateException(pair1)
             } else rate.rate
         } else {
-            val reverted = rateRepo.findLastByName("${to.name.toRateName()}${from.name.toRateName()}", dslContext).awaitSingleOrNull()
+            val reverted = rateRepo.findLastByName(pair2, dslContext).awaitSingleOrNull()
                 ?: return null
             val r = if (reverted.created.isBefore(now.minusSeconds(lifetimeSeconds))) {
-                throw NoActualRateException("${to.name.toRateName()}${from.name.toRateName()}")
+                throw NoActualRateException(pair2)
             } else reverted.rate
             return BigDecimal.ONE.divide(r, decimalScale, RoundingMode.HALF_UP)
         }
