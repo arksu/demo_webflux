@@ -34,9 +34,5 @@ app:
     updateInterval: 5000 # время между запросами курса с биржи
     supported: TRXUSDT, ETHUSDT, TRXETH # пары, которые запрашиваем с биржи
   trongrid:
-    apikey: ${TRONGRID_API_KEY}
+#    apikey: ${TRONGRID_API_KEY}
     updateInterval: 5000
-    host:
-      main: https://api.trongrid.io
-      nile: https://nile.trongrid.io
-      shasta: https://api.shasta.trongrid.io

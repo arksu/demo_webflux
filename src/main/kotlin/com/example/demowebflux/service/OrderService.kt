@@ -147,8 +147,6 @@ class OrderService(
     }
 
     suspend fun expire(order: Order, context: DSLContext) {
-        println("expireOrder")
-        println(order)
         if (statusToExpire.contains(order.status)) {
             // ищем кошелек на который ждали оплаты
             val wallet = blockchainIncomeWalletRepo.findByOrderIdForUpdateSkipLocked(order.id, context).awaitSingleOrNull()

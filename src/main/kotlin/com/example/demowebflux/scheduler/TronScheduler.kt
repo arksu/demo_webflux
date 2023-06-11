@@ -2,9 +2,10 @@ package com.example.demowebflux.scheduler
 
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.service.CurrencyService
-import com.example.demowebflux.service.ExchangeRateService
+import com.example.demowebflux.service.TronService
 import com.example.jooq.enums.BlockchainType
 import jakarta.annotation.PostConstruct
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
 import org.springframework.context.annotation.DependsOn
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service
 class TronScheduler(
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
     private val currencyService: CurrencyService,
+    private val tronService: TronService,
     private val dslContext: DSLContext,
 ) {
     val nileCurrencies: MutableList<Int> = ArrayList()
@@ -40,12 +42,30 @@ class TronScheduler(
 
     @Scheduled(fixedDelayString = "\${app.trongrid.updateInterval}")
     fun update() {
+        /*
+        tronService.getUsdtTransactionsByAccount
+        ищем нашу новую транзакцию
+
+        получаем транзакцию которая в ожидании
+        теребим ее https://nileapi.tronscan.org/api/transaction-info?hash={hash}
+        обновляем отсюда "confirmations": 30
+        как только возвращает "confirmed": true
+            начинаем ходить еще и в tronService.getUsdtConfirmedTransactionsByAccount
+            убеждаемся что наша транзакция есть. сумма из тронскана и trongrid совпадает
+         */
+        runBlocking {
+//            val transaction = tronService.getUsdtConfirmedTransactionsByAccount("addr").collectList().awaitSingleOrNull()
+//            println(transaction)
+
+        }
+
+
         // найдем занятые кошельки по трону
         blockchainIncomeWalletRepo
             .findIsBusy(nileCurrencies, dslContext)
             .doOnNext {
                 // TODO
-//                println(it)
+                println(it)
                 val some = it
             }.subscribe()
     }

@@ -150,7 +150,7 @@ class InvoiceService(
         if (invoice.status != InvoiceStatusType.TERMINATED) {
             invoice.status = InvoiceStatusType.TERMINATED
             invoiceRepo.updateStatus(invoice, context).awaitSingle()
-            val order = orderRepo.findByInvoiceId(invoice.id, context).awaitSingleOrNull()
+            val order = orderRepo.findByInvoiceIdForUpdateSkipLocked(invoice.id, context).awaitSingleOrNull()
 
             // у счета в процессе обязательно должен быть уже заказ
             if (invoice.status == InvoiceStatusType.PROCESSING && order == null) {

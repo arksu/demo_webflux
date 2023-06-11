@@ -8,7 +8,7 @@ export function getApiErrorText(e) {
         errorText = e.response.data.message
         if (!errorText) {
             if (e.response.data) {
-                errorText = JSON.stringify(e.response.data)
+                errorText = "[" + e.response.status + "]" + JSON.stringify(e.response.data)
             } else {
                 errorText = e.message
                 errorText += " " + e.response.statusText
