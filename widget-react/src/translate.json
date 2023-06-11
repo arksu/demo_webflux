@@ -1,19 +1,19 @@
 {
   "en": {
     "main": {
-      "invoice": "Invoice",
-      "status": "Status",
-      "amount": "Amount",
-      "wait_amount": "Wait amount",
+      "select_currency": "Please select a currency to pay",
       "help": "Help",
-      "address": "Address",
+      "please_send": "To complete the payment please send",
+      "to_address": "to address:",
       "waiting_payment": "Waiting payment..."
     }
   },
   "ru": {
     "main": {
+      "select_currency": "Выберите валюту для платежа",
       "help": "Помощь",
-      "address": "Адрес",
+      "please_send": "Для завершения платежа отправьте",
+      "to_address": "на адрес:",
       "waiting_payment": "Ожидание платежа..."
     }
   }

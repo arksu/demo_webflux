@@ -3,10 +3,7 @@ package com.example.demowebflux.service
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.converter.InvoiceDTOConverter
-import com.example.demowebflux.exception.BadRequestException
-import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
-import com.example.demowebflux.exception.NoFreeWalletException
-import com.example.demowebflux.exception.UnprocessableEntityException
+import com.example.demowebflux.exception.*
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderOperationLogRepo
@@ -44,6 +41,8 @@ class OrderService(
     private val scale: Int
 ) {
     val log by LoggerDelegate()
+
+    val statusToExpire = listOf(OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH)
 
     /**
      * клиент выбрал валюту, запускаем сделку, выбираем кошелек под эту валюту
@@ -145,6 +144,37 @@ class OrderService(
             },
             context
         ).awaitSingle()
+    }
+
+    suspend fun expire(order: Order, context: DSLContext) {
+        println("expireOrder")
+        println(order)
+        if (statusToExpire.contains(order.status)) {
+            // ищем кошелек на который ждали оплаты
+            val wallet = blockchainIncomeWalletRepo.findByOrderIdForUpdateSkipLocked(order.id, context).awaitSingleOrNull()
+                ?: throw InternalErrorException("Expire order: wallet is not found or locked")
+            // убедимся что на кошельке стоит наш заказ
+            if (wallet.orderId != order.id) {
+                throw InternalErrorException("Expire order: wallet has wrong order id: ${wallet.orderId}")
+            }
+            // зануляем заказ на кошельке - чтобы он вернулся в пул
+            wallet.orderId = null
+            blockchainIncomeWalletRepo.updateOrderId(wallet, context).awaitSingle()
+
+            updateStatus(order, OrderStatusType.EXPIRED, context)
+        } else {
+            throw InternalErrorException("Expire order: wrong status ${order.status}")
+        }
+    }
+
+    suspend fun updateStatus(order: Order, toStatus: OrderStatusType, context: DSLContext) {
+        val fromStatus = order.status
+
+        // обновляем статус заказа
+        order.status = toStatus
+        orderRepo.updateStatus(order, context).awaitSingle()
+
+        saveLog(fromStatus, order, context)
     }
 
 }

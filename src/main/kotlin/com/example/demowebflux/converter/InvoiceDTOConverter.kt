@@ -3,6 +3,7 @@ package com.example.demowebflux.converter
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.service.CurrencyService
 import com.example.demowebflux.service.ShopService
+import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.BlockchainIncomeWallet
 import com.example.jooq.tables.pojos.Invoice
@@ -20,13 +21,25 @@ class InvoiceDTOConverter(
     suspend fun toInvoiceResponseDTO(invoice: Invoice, order: Order?, wallet: BlockchainIncomeWallet?): InvoiceResponseDTO {
         val currency = if (order != null) currencyService.getById(order.selectedCurrencyId) else null
         val shop = shopService.getById(invoice.shopId, dslContext)
+
+        @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+        val status = when (invoice.status) {
+            InvoiceStatusType.NEW -> OrderStatusType.NEW
+
+            InvoiceStatusType.PROCESSING -> {
+                order?.status ?: OrderStatusType.ERROR
+            }
+
+            InvoiceStatusType.TERMINATED -> order?.status ?: OrderStatusType.EXPIRED
+        }
+
         return InvoiceResponseDTO(
             invoiceId = invoice.externalId,
             invoiceAmount = invoice.amount,
             invoiceCurrency = currencyService.getById(invoice.currencyId).name,
             shopName = shop.name,
             deadline = invoice.deadline.toString(),
-            status = order?.status ?: OrderStatusType.NEW,
+            status = status,
             walletAddress = wallet?.address,
             currency = currency?.name,
             amount = order?.customerAmount,

@@ -5,6 +5,7 @@ import com.example.demowebflux.controller.dto.InvoiceRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.controller.dto.MerchantInvoiceResponseDTO
 import com.example.demowebflux.converter.InvoiceDTOConverter
+import com.example.demowebflux.exception.InternalErrorException
 import com.example.demowebflux.exception.InvoiceAlreadyExists
 import com.example.demowebflux.exception.InvoiceNotFoundException
 import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
@@ -35,6 +36,7 @@ class InvoiceService(
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
     private val invoiceDTOConverter: InvoiceDTOConverter,
+    private val orderService: OrderService,
 
     @Value("\${app.decimalScale:8}")
     private val decimalScale: Int,
@@ -122,11 +124,15 @@ class InvoiceService(
                 invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
             }
 
-            InvoiceStatusType.PROCESSING, InvoiceStatusType.TERMINATED -> {
+            InvoiceStatusType.PROCESSING -> {
                 val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
-                val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingle()
+                val wallet = blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingleOrNull()
 
                 invoiceDTOConverter.toInvoiceResponseDTO(invoice, order, wallet)
+            }
+
+            InvoiceStatusType.TERMINATED -> {
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
             }
         }
     }
@@ -138,5 +144,21 @@ class InvoiceService(
             amount = invoice.amount,
             paymentUrl = "$widgetUrl${invoice.externalId}"
         )
+    }
+
+    suspend fun expire(invoice: Invoice, context: DSLContext) {
+        if (invoice.status != InvoiceStatusType.TERMINATED) {
+            invoice.status = InvoiceStatusType.TERMINATED
+            invoiceRepo.updateStatus(invoice, context).awaitSingle()
+            val order = orderRepo.findByInvoiceId(invoice.id, context).awaitSingleOrNull()
+
+            // у счета в процессе обязательно должен быть уже заказ
+            if (invoice.status == InvoiceStatusType.PROCESSING && order == null) {
+                throw InternalErrorException("Expire PROCESSING invoice: no order")
+            }
+            if (order != null) {
+                orderService.expire(order, context)
+            }
+        }
     }
 }

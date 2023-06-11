@@ -52,6 +52,14 @@ class BlockchainIncomeWalletRepo : AbstractCrudRepo<UUID, BlockchainIncomeWallet
             .toMonoAndMap()
     }
 
+    fun findByOrderIdForUpdateSkipLocked(id: UUID, context: DSLContext): Mono<BlockchainIncomeWallet> {
+        return context.selectFrom(BLOCKCHAIN_INCOME_WALLET)
+            .where(BLOCKCHAIN_INCOME_WALLET.ORDER_ID.eq(id))
+            .forUpdate()
+            .skipLocked()
+            .toMonoAndMap()
+    }
+
     fun updateOrderId(entity: BlockchainIncomeWallet, context: DSLContext): Mono<BlockchainIncomeWallet> {
         return context.update(BLOCKCHAIN_INCOME_WALLET)
             .set(BLOCKCHAIN_INCOME_WALLET.ORDER_ID, entity.orderId)

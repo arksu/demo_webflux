@@ -92,7 +92,7 @@ create table if not exists invoice
     unique (shop_id, merchant_order_id)
 );
 
-create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'CANCELLED', 'ERROR', 'OVERPAID', 'NOT_ENOUGH');
+create type order_status_type as enum ('NEW', 'PENDING', 'COMPLETED', 'EXPIRED', 'ERROR', 'OVERPAID', 'NOT_ENOUGH');
 
 -- заказы сделанные на основе счета
 create table if not exists "order"

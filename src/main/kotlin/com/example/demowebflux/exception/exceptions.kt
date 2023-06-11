@@ -17,6 +17,11 @@ class UnprocessableEntityException(
     message: String
 ) : AppException(message)
 
+@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+class InternalErrorException(
+    message: String
+) : AppException(message)
+
 @ResponseStatus(HttpStatus.CONFLICT)
 class InvoiceAlreadyExists(
     @ResponseErrorProperty

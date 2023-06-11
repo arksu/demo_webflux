@@ -18,7 +18,7 @@ function Widget() {
     const [sendingSelectCurrency, setSendingSelectCurrency] = useState(false)
 
     useEffect(() => {
-        const toProcess = ['PENDING', 'NOT_ENOUGH', 'OVERPAID']
+        const toProcess = ['NEW', 'PENDING', 'NOT_ENOUGH', 'OVERPAID']
         // если счет в ожидании оплаты - надо запустить таймер
         if (invoice && toProcess.includes(invoice.status)) {
             console.log("start timer")
@@ -117,7 +117,7 @@ function Widget() {
             ) : null
             return <>
                 <Row className="mb-3">
-                    <Col xs={4} className="">
+                    <Col xs={4} className="text-start">
                         {invoice.shopName}
                     </Col>
                     <Col xs={8} className="text-end fw-bold">
@@ -125,7 +125,6 @@ function Widget() {
                     </Col>
                 </Row>
                 {!availableCurrencies && <>
-
                     <Row className="text-center">
                         <Col>
                             <Spinner size="lg" animation="border" role="status"/>
@@ -136,7 +135,7 @@ function Widget() {
                     <>
                         <Row className="text-center mb-3">
                             <Col>
-                                Please select a currency to pay
+                                {t('main:select_currency')}
                             </Col>
                         </Row>
                         {list}
@@ -146,7 +145,7 @@ function Widget() {
         } else if (invoice.status === 'PENDING') {
             return <>
                 <Row>
-                    <Col xs={4} className="">
+                    <Col xs={4} className="text-start">
                         {invoice.shopName}
                     </Col>
                     <Col xs={8} className="text-end fw-bold">
@@ -160,13 +159,22 @@ function Widget() {
                     ></QRCode>
                 </Row>
                 <Row className="justify-content-center">
-                    {t('main:address')}
+                    {t('main:please_send')}
+                </Row>
+                <Row className="justify-content-center fw-bold fs-3">
+                    {invoice.amountPending} {invoice.currency}
+                </Row>
+                <Row className="justify-content-center">
+                    {t('main:to_address')}
                 </Row>
                 <Row className="fs-6 fw-bold justify-content-center text-break">
                     {invoice.walletAddress}
                 </Row>
             </>
-        } else if (invoice.status === 'NOT_ENOUGH') {
+        } else if (invoice.status === 'COMPLETED') {
+            return <>
+            </>
+        } else if (invoice.status === 'EXPIRED') {
             return <>
             </>
         }
