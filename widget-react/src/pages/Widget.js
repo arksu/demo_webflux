@@ -6,8 +6,8 @@ import {useEffect, useState} from "react";
 import {getApiErrorText, handleApiError, showError} from "../utils/apiUtils";
 import {useTranslation} from "react-i18next";
 import QRCode from "react-qr-code";
-import CooldownTimer from "../components/CooldownTimer";
 import Countdown from "react-countdown";
+import LanguageSelector from "../components/LanguageSelector";
 
 function Widget() {
     let {id} = useParams()
@@ -16,63 +16,51 @@ function Widget() {
     const [availableCurrencies, setAvailableCurrencies] = useState(null);
     const [error, setError] = useState(null);
     const [sendingSelectCurrency, setSendingSelectCurrency] = useState(false)
-    const [startTimer, setStartTimer] = useState(false);
-
-    // const startPendingTimer = function () {
-    //     console.log("startPendingTimer")
-    //     let timer = setInterval(tick, 1000)
-    //     return () => {
-    //         clearInterval(timer)
-    //     }
-    // }
 
     useEffect(() => {
+        const toProcess = ['PENDING', 'NOT_ENOUGH', 'OVERPAID']
         // если счет в ожидании оплаты - надо запустить таймер
-        if (invoice && invoice.status !== 'EXPIRED') {
+        if (invoice && toProcess.includes(invoice.status)) {
             console.log("start timer")
-            let timer = setInterval(tick, 1000)
+            let timer = setInterval(fetchInvoice, 5000)
             return () => {
                 clearInterval(timer)
             }
         }
     }, [invoice])
 
-    const tick = function () {
-        console.log("timer", invoice)
+    const fetchAvailableCurrencies = async () => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/invoice/${id}/available`);
+            console.log("currencies list", response.data)
+            setAvailableCurrencies(response.data)
+        } catch (error) {
+            handleApiError(error)
+        }
     }
 
-    useEffect(() => {
+    const fetchInvoice = async () => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/invoice/${id}`);
+            // если счет новый - надо загрузить список доступных валют
+            if (response.data.status === 'NEW') {
 
-        const fetchAvailableCurrencies = async () => {
-            try {
-                const response = await axios.get(`${process.env.REACT_APP_API_URL}/invoice/${id}/available`);
-                console.log("currencies list", response.data)
-                setAvailableCurrencies(response.data)
-            } catch (error) {
-                handleApiError(error)
+                // TODO debug
+                setTimeout(() => {
+                    fetchAvailableCurrencies();
+                }, 300)
             }
-        }
-
-        const fetchInvoice = async () => {
-            try {
-                const response = await axios.get(`${process.env.REACT_APP_API_URL}/invoice/${id}`);
-                // если счет новый - надо загрузить список доступных валют
-                if (response.data.status === 'NEW') {
-
-                    // TODO debug
-                    setTimeout(() => {
-                        fetchAvailableCurrencies();
-                    }, 300)
-                }
-                console.log(response.data)
-                setInvoice(response.data)
-            } catch (error) {
+            console.log(response.data)
+            setInvoice(response.data)
+            setError(null)
+        } catch (error) {
+            if (!invoice) {
                 setError(getApiErrorText(error))
             }
         }
+    }
 
-        console.log("call fetchInvoice")
-
+    useEffect(() => {
         // TODO debug
         const timeout = setTimeout(() => {
             fetchInvoice();
@@ -186,12 +174,11 @@ function Widget() {
 
     return <>
         <Row>
-            <Col>
-                Waiting payment...
+            <Col className="text-start" xs={8}>
+                {t('main:waiting_payment')}
             </Col>
-            <Col className="text-end fw-bold">
+            <Col className="text-end fw-bold" xs={4}>
                 <Countdown date={invoice.deadline} daysInHours={true}/>
-                {/*<CooldownTimer deadline={invoice.deadline}/>*/}
             </Col>
         </Row>
         <hr/>
@@ -199,16 +186,10 @@ function Widget() {
         <hr/>
         <Row className="align-items-center">
             <Col className="text-start">
-                <Link to="">Help link</Link>
+                <Link to="">{t('main:help')}</Link>
             </Col>
             <Col className="text-end">
-                <Dropdown drop="up" align="end">
-                    <Dropdown.Toggle dir="down">EN</Dropdown.Toggle>
-                    <Dropdown.Menu>
-                        <Dropdown.Item>EN</Dropdown.Item>
-                        <Dropdown.Item>RU</Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
+                <LanguageSelector/>
             </Col>
         </Row>
     </>
