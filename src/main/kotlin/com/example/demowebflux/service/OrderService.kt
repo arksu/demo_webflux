@@ -31,6 +31,7 @@ class OrderService(
     private val merchantService: MerchantService,
     private val exchangeRateService: ExchangeRateService,
     private val shopService: ShopService,
+    private val walletService: WalletService,
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
@@ -54,6 +55,9 @@ class OrderService(
             val invoice = invoiceRepo.findByExternalIdForUpdateSkipLocked(request.invoiceId, trx.dsl()).awaitSingleOrNull()
                 ?: throw InvoiceNotFoundOrLockedException(request.invoiceId)
 
+            if (invoice.status == InvoiceStatusType.PROCESSING) {
+                throw UnprocessableEntityException("This invoice has already started an order")
+            }
             if (invoice.status != InvoiceStatusType.NEW) {
                 throw UnprocessableEntityException("Wrong invoice status")
             }
@@ -64,17 +68,8 @@ class OrderService(
             val merchant = merchantService.getById(shop.merchantId, trx.dsl())
             val fromCurrency = currencyService.getById(invoice.currencyId)
 
-            // ищем свободные кошельки на которые можем принять
-            val freeWallets = blockchainIncomeWalletRepo
-                .findByCurrencyAndFreeForUpdateSkipLocked(targetCurrency.id, trx.dsl())
-                .awaitSingleOrNull()
-                ?: throw NoFreeWalletException()
-
-            if (freeWallets.isEmpty()) {
-                throw NoFreeWalletException()
-            }
-            // берем первый из перемешанного списка свободных кошельков
-            val wallet = freeWallets.shuffled()[0]
+            // запрашиваем свободный кошелек
+            val wallet = walletService.getFreeWallet(targetCurrency, trx.dsl())
 
             val exchangeRate = exchangeRateService.getRate(fromCurrency, targetCurrency)
                 ?: throw BadRequestException("Incorrect selected currency, try other")
