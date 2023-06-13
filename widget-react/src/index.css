@@ -17,11 +17,29 @@ code {
     padding-top: 100px;
 }
 
+@media screen and (max-width: 600px) {
+    .main {
+        padding-top: 50px;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .main {
+        padding-top: 0;
+    }
+}
+
 .widget-container-row {
-    min-width: 300px;
+    min-width: 320px;
     padding: 20px;
     border-radius: 10px;
     background-color: #dfe3e3;
 
     border: 2px solid #325f6b !important;
 }
+
+.address-text {
+    font-size: 0.95rem !important;
+    font-weight: bold;
+}
+

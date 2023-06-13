@@ -167,7 +167,7 @@ function Widget() {
                 <Row className="justify-content-center">
                     {t('main:to_address')}
                 </Row>
-                <Row className="fs-6 fw-bold justify-content-center text-break">
+                <Row className="fs-6 address-text justify-content-center text-break">
                     {invoice.walletAddress}
                 </Row>
             </>

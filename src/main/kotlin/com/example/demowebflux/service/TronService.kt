@@ -78,19 +78,11 @@ class TronService(
 
     private val DIGEST_SHA256 = MessageDigest.getInstance("SHA-256")
 
-    @PostConstruct
-    fun pos() {
-        generate()
-        generate()
-        generate()
-    }
-
-    fun generate() {
+    fun generateWallet(): Pair<String, String> {
         val key = randomHexStringByKotlinRandom(64)
-        val address = getTronAddress(key)
-        val addr = encodeBase58WithChecksum(address)
-        println("key: $key")
-        println("addr: $addr")
+        val addressBytes = getTronAddress(key)
+        val address = encodeBase58WithChecksum(addressBytes)
+        return Pair(key, address)
     }
 
     fun getTronAddress(key: String): ByteArray {

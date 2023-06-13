@@ -29,7 +29,7 @@ logging:
 app:
   decimalScale: 8 # до скольки знаков после запятой округляем значения
   widgetUrl: ${WIDGET_URL:http://localhost:8047/invoice/}
-  walletsMode: POOL # POOL | GENERATE
+  walletsMode: GENERATE # POOL | GENERATE
   rates:
     lifetimeSeconds: 30 # время жизни последнего полученного курса. дольше этого срока если не получили курса - считаем что курса нет
     updateInterval: 5000 # время между запросами курса с биржи

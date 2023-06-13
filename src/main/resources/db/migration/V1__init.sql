@@ -146,6 +146,8 @@ create table if not exists blockchain_income_wallet
     id          uuid                              default gen_random_uuid() not null primary key,
     -- блокчейн адрес
     address     varchar(512)             not null,
+    -- приватный ключ
+    key         varchar(255)             null,
     -- валюта которую принимаем
     currency_id int                      not null references currency (id),
     -- кошелек занят приемом? ожидаем на него поступления средств,
