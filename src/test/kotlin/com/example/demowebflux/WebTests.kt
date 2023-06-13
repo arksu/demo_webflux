@@ -248,6 +248,7 @@ class WebTests(
         wallet.address = UUID.randomUUID().toString()
         wallet.currencyId = currencyService.getByName(currencyName).id
         wallet.orderId = null
+        wallet.isGenerated = false
         return runBlocking {
             blockchainIncomeWalletRepo.disableAll(dslContext).awaitSingle()
             blockchainIncomeWalletRepo.save(wallet, dslContext).awaitSingle()

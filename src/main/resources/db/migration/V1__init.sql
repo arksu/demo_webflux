@@ -123,8 +123,6 @@ create table if not exists "order"
     commission_amount          decimal                  not null check ( commission_amount >= 0 ),
     -- комиссия мерчанта на момент создания сделки (%)
     commission                 decimal                  not null check (commission >= 0 ),
-    -- количество подтверждений сети при проведении транзакции
-    confirmations              int                      not null check ( confirmations >= 0 ),
     created                    timestamp with time zone not null default now()
 );
 
@@ -143,23 +141,47 @@ create table if not exists order_operation_log
 -- пул кошельков на который будем принимать средства от клиента
 create table if not exists blockchain_income_wallet
 (
-    id          uuid                              default gen_random_uuid() not null primary key,
+    id           uuid                              default gen_random_uuid() not null primary key,
     -- блокчейн адрес
-    address     varchar(512)             not null,
+    address      varchar(512)             not null,
     -- приватный ключ
-    key         varchar(255)             null,
+    key          varchar(255)             null,
+    -- кошелек сгенерирован? если да то не очищаем поле order_id в кошельке при завершении ордера
+    is_generated bool                     not null,
     -- валюта которую принимаем
-    currency_id int                      not null references currency (id),
+    currency_id  int                      not null references currency (id),
     -- кошелек занят приемом? ожидаем на него поступления средств,
     -- тогда впишем сюда ид заказа по которому ожидаем оплату на кошелек
     -- null - если кошелек свободен
-    order_id    uuid                     null references "order" (id),
+    order_id     uuid                     null references "order" (id),
     -- можно отключить кошелек
     -- (на него не будут создаваться новые заказы, но те что в обработке - продолжат процессится шедулером)
-    enabled     bool                     not null default true,
-    updated     timestamp with time zone not null default now(),
+    enabled      bool                     not null default true,
+    updated      timestamp with time zone not null default now(),
     -- на одном адресе не может быть несколько валют
     unique (address, currency_id)
+);
+
+-- транзакции из блокчейна
+create table if not exists blockchain_transaction
+(
+    id           char(64)                 not null primary key,
+    amount       decimal                  not null,
+    from_address char(64)                 not null,
+    to_address   char(64)                 not null,
+    wallet_id    uuid                     not null references blockchain_income_wallet (id),
+    currency_id  int                      not null references currency (id),
+    blockchain   blockchain_type          not null,
+    created      timestamp with time zone not null default now()
+);
+
+-- транзакции в ожидании подтверждения
+create table if not exists blockchain_transaction_pending
+(
+    id            char(64) not null primary key,
+    confirmed     boolean  not null,
+    -- количество подтверждений сети при проведении транзакции
+    confirmations int      not null check ( confirmations >= 0 )
 );
 
 create type rate_source as enum ('BINANCE');
@@ -180,7 +202,7 @@ values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@emai
 insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, underpayment_allowed)
 values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT', 35, 0.02);
 
-insert into blockchain_income_wallet (address, currency_id, order_id)
-values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 3, null);
-values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 4, null);
-values ('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 5, null);
+insert into blockchain_income_wallet (address, currency_id, is_generated, order_id)
+values ('TFMyJ4fxtCttadUTYGSqKy9iwKhFNWqEhv', 3, false, null);
+values ('TFMyJ4fxtCttadUTYGSqKy9iwKhFNWqEhv', 4, false, null);
+values ('TFMyJ4fxtCttadUTYGSqKy9iwKhFNWqEhv', 5, false, null);

@@ -47,6 +47,7 @@ class WalletService(
                         newWallet.currencyId = currency.id
                         newWallet.address = address
                         newWallet.key = key
+                        newWallet.isGenerated = true
                         newWallet.enabled = true
 
                         blockchainIncomeWalletRepo.save(newWallet, context).awaitSingle()

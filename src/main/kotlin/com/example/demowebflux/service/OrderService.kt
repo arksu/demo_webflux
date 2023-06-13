@@ -4,6 +4,7 @@ import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.converter.InvoiceDTOConverter
 import com.example.demowebflux.exception.*
+import com.example.demowebflux.model.AddressModeEnum
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderOperationLogRepo
@@ -39,7 +40,10 @@ class OrderService(
     private val invoiceDTOConverter: InvoiceDTOConverter,
 
     @Value("\${app.decimalScale}")
-    private val scale: Int
+    private val scale: Int,
+
+    @Value("\${app.walletsMode}")
+    private val addressMode: AddressModeEnum
 ) {
     val log by LoggerDelegate()
 
@@ -111,7 +115,6 @@ class OrderService(
             new.exchangeRate = exchangeRate.setScale(scale, RoundingMode.HALF_UP)
             new.referenceAmount = referenceAmount.setScale(scale, RoundingMode.HALF_UP)
             new.selectedCurrencyId = targetCurrency.id
-            new.confirmations = 0
 
             // сохраняем ордер в базу
             val saved = orderRepo.save(new, trx.dsl()).awaitSingle()
@@ -146,13 +149,13 @@ class OrderService(
             // ищем кошелек на который ждали оплаты
             val wallet = blockchainIncomeWalletRepo.findByOrderIdForUpdateSkipLocked(order.id, context).awaitSingleOrNull()
                 ?: throw InternalErrorException("Expire order: wallet is not found or locked")
-            // убедимся что на кошельке стоит наш заказ
-            if (wallet.orderId != order.id) {
-                throw InternalErrorException("Expire order: wallet has wrong order id: ${wallet.orderId}")
+
+            // только если этот кошелек явно не генерировали под заказ
+            if (!wallet.isGenerated) {
+                // зануляем заказ на кошельке - чтобы он вернулся в пул
+                wallet.orderId = null
+                blockchainIncomeWalletRepo.updateOrderId(wallet, context).awaitSingle()
             }
-            // зануляем заказ на кошельке - чтобы он вернулся в пул
-            wallet.orderId = null
-            blockchainIncomeWalletRepo.updateOrderId(wallet, context).awaitSingle()
 
             updateStatus(order, OrderStatusType.EXPIRED, context)
         } else {

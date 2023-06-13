@@ -22,6 +22,7 @@ import java.util.*
 class TronService(
     private val webClient: WebClient
 ) {
+    private val limit = 50
 
     /**
      * адреса USDT контрактов в разных БЧ (нужно для тестирования)
@@ -41,11 +42,14 @@ class TronService(
         BlockchainType.TRON_SHASTA to "https://api.shasta.trongrid.io",
     )
 
+    /**
+     * получаем все транзакции с адреса с лимитом, но в результате выдаем только USDT!
+     */
     fun getUsdtTransactionsByAccount(address: String, blockchain: BlockchainType): Flux<TransactionTRC20> {
         val url = trongridUrl[blockchain] ?: throw TronErrorException("no url for $blockchain")
         val usdt = usdtAddress[blockchain] ?: throw TronErrorException("no USDT address for $blockchain")
         return webClient.get()
-            .uri("$url/v1/accounts/{address}/transactions/trc20", address)
+            .uri("$url/v1/accounts/{address}/transactions/trc20?limit=$limit", address)
             .retrieve()
             .bodyToMono(TransactionsTRC20Response::class.java)
             .flatMapMany { response ->
@@ -60,7 +64,7 @@ class TronService(
         val url = trongridUrl[blockchain] ?: throw TronErrorException("no url for $blockchain")
         val usdt = usdtAddress[blockchain] ?: throw TronErrorException("no USDT address for $blockchain")
         return webClient.get()
-            .uri("$url/v1/accounts/{address}/transactions/trc20?only_confirmed=true", address)
+            .uri("$url/v1/accounts/{address}/transactions/trc20?limit=$limit&only_confirmed=true", address)
             .retrieve()
             .bodyToMono(TransactionsTRC20Response::class.java)
             .flatMapMany { response ->
