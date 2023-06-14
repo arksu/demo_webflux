@@ -1,6 +1,10 @@
 package com.example.demowebflux.service.dto.tronscan
 
+import java.math.BigDecimal
+
 data class ContractData(
-    val contract_address: String,
-    val owner_address: String
+    val amount: BigDecimal?,
+    val owner_address: String,
+    val contract_address: String?,
+    val to_address: String?,
 )

@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.*
 
 @Service
 class OrderService(
@@ -171,6 +172,14 @@ class OrderService(
         orderRepo.updateStatus(order, context).awaitSingle()
 
         saveLog(fromStatus, order, context)
+    }
+
+    /**
+     * добавить в заказ средства от клиента (получили тем или иным способом)
+     * двигаем статус заказа
+     */
+    suspend fun addCustomerAmount(order: Order, amount: BigDecimal, context: DSLContext) {
+        // TODO обработка поступившей на заказ суммы
     }
 
 }

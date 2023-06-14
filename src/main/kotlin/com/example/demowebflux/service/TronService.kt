@@ -7,6 +7,7 @@ import com.example.demowebflux.service.dto.TransactionsTRC20Response
 import com.example.demowebflux.service.dto.tronscan.TronscanTransactionInfo
 import com.example.demowebflux.util.randomHexStringByKotlinRandom
 import com.example.jooq.enums.BlockchainType
+import com.example.jooq.tables.pojos.Currency
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.crypto.params.ECDomainParameters
 import org.bouncycastle.jcajce.provider.digest.Keccak
@@ -26,15 +27,6 @@ class TronService(
     private val limit = 50
 
     /**
-     * адреса USDT контрактов в разных БЧ (нужно для тестирования)
-     */
-    val usdtAddress: Map<BlockchainType, String> = mapOf(
-        BlockchainType.TRON to "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-        BlockchainType.TRON_NILE to "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj",
-        // TODO shasta
-    )
-
-    /**
      * адреса апи trongrid по блокчейну
      */
     val trongridUrl: Map<BlockchainType, String> = mapOf(
@@ -48,34 +40,38 @@ class TronService(
     )
 
     /**
-     * получаем все транзакции с адреса с лимитом, но в результате выдаем только USDT!
+     * получаем все транзакции с адреса с лимитом, но в результате выдаем только Token!
      */
-    fun getUsdtTransactionsByAccount(address: String, blockchain: BlockchainType): Flux<TransactionTRC20> {
-        val url = trongridUrl[blockchain] ?: throw TronErrorException("no url for $blockchain")
-        val usdt = usdtAddress[blockchain] ?: throw TronErrorException("no USDT address for $blockchain")
+    fun getTokenTransactionsByAccount(address: String, currency: Currency): Flux<TransactionTRC20> {
+        val url = trongridUrl[currency.blockchain] ?: throw TronErrorException("no url for ${currency.blockchain}")
+        val contractAddress = currency.contractAddress?.trim() ?: throw TronErrorException("no Token contract address for ${currency.contractAddress}")
+
+        // https://developers.tron.network/v3.7/reference/trc20-transaction-information-by-account-address
+
         return webClient.get()
-            .uri("$url/v1/accounts/{address}/transactions/trc20?limit=$limit", address)
+            .uri("$url/v1/accounts/{address}/transactions/trc20?contract_address=$contractAddress&limit=$limit", address)
             .retrieve()
             .bodyToMono(TransactionsTRC20Response::class.java)
             .flatMapMany { response ->
                 Flux.fromIterable(response.data)
                     .filter {
-                        it.token_info?.address == usdt
+                        // должен совпасть и адрес контракта и название токена
+                        it.token_info?.address == contractAddress && currency.token.equals(it.token_info.symbol, ignoreCase = true)
                     }
             }
     }
 
-    fun getUsdtConfirmedTransactionsByAccount(address: String, blockchain: BlockchainType): Flux<TransactionTRC20> {
-        val url = trongridUrl[blockchain] ?: throw TronErrorException("no url for $blockchain")
-        val usdt = usdtAddress[blockchain] ?: throw TronErrorException("no USDT address for $blockchain")
+    fun getTokenConfirmedTransactionsByAccount(address: String, currency: Currency): Flux<TransactionTRC20> {
+        val url = trongridUrl[currency.blockchain] ?: throw TronErrorException("no url for ${currency.blockchain}")
+        val contractAddress = currency.contractAddress?.trim() ?: throw TronErrorException("no Token contract address for ${currency.contractAddress}")
         return webClient.get()
-            .uri("$url/v1/accounts/{address}/transactions/trc20?limit=$limit&only_confirmed=true", address)
+            .uri("$url/v1/accounts/{address}/transactions/trc20?contract_address=$contractAddress&limit=$limit&only_confirmed=true", address)
             .retrieve()
             .bodyToMono(TransactionsTRC20Response::class.java)
             .flatMapMany { response ->
                 Flux.fromIterable(response.data)
                     .filter {
-                        it.token_info?.address == usdt
+                        it.token_info?.address == contractAddress
                     }
             }
     }

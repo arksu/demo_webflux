@@ -4,21 +4,30 @@ create type blockchain_type as enum ('TRON', 'TRON-NILE', 'TRON-SHASTA', 'ETH');
 
 create table if not exists currency
 (
-    id           int generated always as identity primary key,
-    name         varchar(32)     not null,
-    blockchain   blockchain_type not null,
-    display_name varchar(64)     not null,
-    enabled      bool default true
+    id                     int generated always as identity primary key,
+    -- код валюты (краткое наименование)
+    name                   varchar(32)     not null,
+    -- тип блокчейна
+    blockchain             blockchain_type not null,
+    -- как в точности называется токен в блокчейне. проверяем это в транзакции
+    token                  varchar(64)     null,
+    -- адрес токена в блокчейне
+    contract_address       varchar(128)    null,
+    -- сколько подтверждений ждем в блокчейне
+    confirmations_required integer         not null,
+    -- имя которое показываем в виджете
+    display_name           varchar(64)     not null,
+    enabled                bool default true
 );
 
-insert into currency (name, blockchain, display_name, enabled)
-values ('USDT-TRC20', 'TRON', 'Tether TRC-20', false),
-       ('TRX', 'TRON', 'Tron', false),
-       ('USDT-TRC20-NILE', 'TRON-NILE', 'TEST Nile Tether TRC-20', true),
-       ('USDD-TRC20-NILE', 'TRON-NILE', 'TEST Nile USDD TRC-20', true),
-       ('TRX-NILE', 'TRON-NILE', 'TEST Nile Tron', true),
-       ('USDT-ERC20', 'ETH', 'Tether ERC-20', false),
-       ('ETH', 'ETH', 'Ethereum', false);
+insert into currency (name, blockchain, display_name, token, contract_address, confirmations_required, enabled)
+values ('USDT-TRC20', 'TRON', 'Tether TRC-20', 'USDT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 25, false),
+       ('TRX', 'TRON', 'Tron', null, null, 25, false),
+       ('USDT-TRC20-NILE', 'TRON-NILE', 'TEST Nile Tether TRC-20', 'USDT', 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj', 25, true),
+       ('USDD-TRC20-NILE', 'TRON-NILE', 'TEST Nile USDD TRC-20', 'USDD', 'THJ6CYd8TyNzHFrdLTYQ1iAAZDrf5sEsZU', 25, true),
+       ('TRX-NILE', 'TRON-NILE', 'TEST Nile Tron', null, null, 25, true),
+       ('USDT-ERC20', 'ETH', 'Tether ERC-20', 'USDT', '0xdac17f958d2ee523a2206206994597c13d831ec7', 25, false),
+       ('ETH', 'ETH', 'Ethereum', null, null, 25, false);
 
 create table if not exists merchant
 (
@@ -178,12 +187,16 @@ create table if not exists blockchain_transaction
 -- транзакции в ожидании подтверждения
 create table if not exists blockchain_transaction_pending
 (
-    id            char(64)        not null primary key,
-    blockchain    blockchain_type not null,
-    confirmed     boolean         not null,
-    completed     boolean         not null,
+    id            char(64)                     not null primary key,
+    blockchain    blockchain_type              not null,
+    confirmed     boolean                      not null,
+    completed     boolean                      not null,
+    order_id      uuid references "order" (id) not null,
     -- количество подтверждений сети при проведении транзакции
-    confirmations int             not null check ( confirmations >= 0 )
+    confirmations int                          not null check ( confirmations >= 0 ),
+    created       timestamp with time zone     not null default now(),
+    completed_ad  timestamp with time zone     null,
+    updated_ad    timestamp with time zone     null
 );
 
 create type rate_source as enum ('BINANCE');

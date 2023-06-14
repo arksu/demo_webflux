@@ -15,6 +15,14 @@ abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
             .toMonoAndMap()
     }
 
+    fun findByIdForUpdateSkipLocked(id: ID, context: DSLContext): Mono<T> {
+        return context.selectFrom(table)
+            .where(idField.eq(id))
+            .forUpdate()
+            .skipLocked()
+            .toMonoAndMap()
+    }
+
     fun save(entity: T, context: DSLContext): Mono<T> {
         return context.insertInto(table)
             .set(context.newRecord(table, entity))

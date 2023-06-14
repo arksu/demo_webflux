@@ -17,14 +17,6 @@ class InvoiceRepo : AbstractCrudRepo<UUID, Invoice, InvoiceRecord>() {
     override val idField = INVOICE.ID
     override val mapper = { it: InvoiceRecord -> Invoice(it) }
 
-    fun findByIdForUpdateSkipLocked(id: UUID, context: DSLContext): Mono<Invoice> {
-        return context.selectFrom(INVOICE)
-            .where(INVOICE.ID.eq(id))
-            .forUpdate()
-            .skipLocked()
-            .toMonoAndMap()
-    }
-
     fun findByExternalId(id: String, context: DSLContext): Mono<Invoice> {
         return context.selectFrom(INVOICE)
             .where(INVOICE.EXTERNAL_ID.eq(id))
