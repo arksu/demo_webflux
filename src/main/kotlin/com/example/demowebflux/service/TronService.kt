@@ -4,15 +4,16 @@ import com.example.demowebflux.crypto.Base58
 import com.example.demowebflux.exception.TronErrorException
 import com.example.demowebflux.service.dto.TransactionTRC20
 import com.example.demowebflux.service.dto.TransactionsTRC20Response
+import com.example.demowebflux.service.dto.tronscan.TronscanTransactionInfo
 import com.example.demowebflux.util.randomHexStringByKotlinRandom
 import com.example.jooq.enums.BlockchainType
-import jakarta.annotation.PostConstruct
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.crypto.params.ECDomainParameters
 import org.bouncycastle.jcajce.provider.digest.Keccak
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.*
@@ -40,6 +41,10 @@ class TronService(
         BlockchainType.TRON to "https://api.trongrid.io",
         BlockchainType.TRON_NILE to "https://nile.trongrid.io",
         BlockchainType.TRON_SHASTA to "https://api.shasta.trongrid.io",
+    )
+
+    val tronscanUrl: Map<BlockchainType, String> = mapOf(
+        BlockchainType.TRON_NILE to "https://nileapi.tronscan.org"
     )
 
     /**
@@ -73,6 +78,14 @@ class TronService(
                         it.token_info?.address == usdt
                     }
             }
+    }
+
+    fun getTronscanTransactionInfo(id: String, blockchain: BlockchainType): Mono<TronscanTransactionInfo> {
+        val url = tronscanUrl[blockchain]
+        return webClient.get()
+            .uri("$url/api/transaction-info?hash=$id")
+            .retrieve()
+            .bodyToMono(TronscanTransactionInfo::class.java)
     }
 
 

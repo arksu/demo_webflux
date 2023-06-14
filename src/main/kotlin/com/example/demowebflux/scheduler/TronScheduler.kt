@@ -1,15 +1,13 @@
 package com.example.demowebflux.scheduler
 
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
+import com.example.demowebflux.repo.BlockchainTransactionPendingRepo
 import com.example.demowebflux.repo.BlockchainTransactionRepo
 import com.example.demowebflux.service.CurrencyService
 import com.example.demowebflux.service.TronService
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.jooq.enums.BlockchainType
-import com.example.jooq.tables.pojos.BlockchainIncomeWallet
-import com.example.jooq.tables.pojos.BlockchainTransaction
-import com.example.jooq.tables.pojos.Currency
-import com.example.jooq.tables.pojos.Order
+import com.example.jooq.tables.pojos.*
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
@@ -26,6 +24,7 @@ import java.math.BigDecimal
 class TronScheduler(
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
     private val blockchainTransactionRepo: BlockchainTransactionRepo,
+    private val blockchainTransactionPendingRepo: BlockchainTransactionPendingRepo,
     private val currencyService: CurrencyService,
     private val tronService: TronService,
     private val dslContext: DSLContext,
@@ -55,11 +54,25 @@ class TronScheduler(
         println("$a : $k")
     }
 
+    @Scheduled(fixedDelay = 1000)
+    fun updatePendingTransactions() {
+        blockchainTransactionPendingRepo.findAllNotCompleted(dslContext)
+            .flatMap {
+                val info = tronService.getTronscanTransactionInfo(it.id, it.blockchain)
+                info
+            }
+            .doOnNext {
+                println(it)
+            }
+            .blockLast()
+    }
+
     @Scheduled(fixedDelayString = "\${app.trongrid.updateInterval}")
-    fun update() {
+    fun updateNewTransactions() {
         log.debug("begin update tron")
 
         /*
+        https://developers.tron.network/v3.7/reference/trc20-transaction-information-by-account-address
 
         запоминаем все транзакции аккаунта
         tronService.getUsdtTransactionsByAccount
@@ -134,8 +147,16 @@ class TronScheduler(
 
                     if (trx.to == wallet.address && amount >= order.customerAmountPending) {
                         // мы нашли транзакцию на нужную нам сумму. теперь надо убедиться что она пройдет по блокчейну и будет подтверждена
-                        // TODO сохраним ее в pending
+                        // сохраним ее в pending
                         println("WIN!")
+
+                        val pendingTrx = BlockchainTransactionPending()
+                        pendingTrx.id = trx.transaction_id
+                        pendingTrx.confirmations = 0
+                        pendingTrx.completed = false
+                        pendingTrx.confirmed = false
+                        pendingTrx.blockchain = currency.blockchain
+                        blockchainTransactionPendingRepo.save(pendingTrx, context).awaitSingle()
                     }
 
                     val savedTrx = BlockchainTransaction()

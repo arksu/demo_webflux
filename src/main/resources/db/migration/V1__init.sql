@@ -178,10 +178,12 @@ create table if not exists blockchain_transaction
 -- транзакции в ожидании подтверждения
 create table if not exists blockchain_transaction_pending
 (
-    id            char(64) not null primary key,
-    confirmed     boolean  not null,
+    id            char(64)        not null primary key,
+    blockchain    blockchain_type not null,
+    confirmed     boolean         not null,
+    completed     boolean         not null,
     -- количество подтверждений сети при проведении транзакции
-    confirmations int      not null check ( confirmations >= 0 )
+    confirmations int             not null check ( confirmations >= 0 )
 );
 
 create type rate_source as enum ('BINANCE');
