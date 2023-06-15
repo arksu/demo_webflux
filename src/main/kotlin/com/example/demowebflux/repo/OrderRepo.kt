@@ -35,4 +35,13 @@ class OrderRepo : AbstractCrudRepo<UUID, Order, OrderRecord>() {
             .returning()
             .toMonoAndMap()
     }
+
+    fun update(entity: Order, context: DSLContext): Mono<Order> {
+        return context.update(ORDER)
+            .set(ORDER.CUSTOMER_AMOUNT_PENDING, entity.customerAmountPending)
+            .set(ORDER.CUSTOMER_AMOUNT_RECEIVED, entity.customerAmountReceived)
+            .where(ORDER.ID.eq(entity.id))
+            .returning()
+            .toMonoAndMap()
+    }
 }

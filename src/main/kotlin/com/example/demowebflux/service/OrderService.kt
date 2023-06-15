@@ -10,6 +10,7 @@ import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderOperationLogRepo
 import com.example.demowebflux.repo.OrderRepo
 import com.example.demowebflux.util.LoggerDelegate
+import com.example.demowebflux.util.percentToMult
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.Order
@@ -158,13 +159,13 @@ class OrderService(
                 blockchainIncomeWalletRepo.updateOrderId(wallet, context).awaitSingle()
             }
 
-            updateStatus(order, OrderStatusType.EXPIRED, context)
+            moveToStatus(order, OrderStatusType.EXPIRED, context)
         } else {
             throw InternalErrorException("Expire order: wrong status ${order.status}")
         }
     }
 
-    suspend fun updateStatus(order: Order, toStatus: OrderStatusType, context: DSLContext) {
+    suspend fun moveToStatus(order: Order, toStatus: OrderStatusType, context: DSLContext) {
         val fromStatus = order.status
 
         // обновляем статус заказа
@@ -179,7 +180,36 @@ class OrderService(
      * двигаем статус заказа
      */
     suspend fun addCustomerAmount(order: Order, amount: BigDecimal, context: DSLContext) {
-        // TODO обработка поступившей на заказ суммы
+        val invoice = invoiceRepo.findById(order.invoiceId, context).awaitSingleOrNull()
+            ?: throw InvoiceNotFoundOrLockedException(order.invoiceId.toString())
+        val shop = shopService.getById(invoice.shopId, context)
+
+        // обработка поступившей на заказ суммы
+        order.customerAmountReceived += amount
+        // считаем сколько еще осталось оплатить
+        order.customerAmountPending = order.customerAmount - order.customerAmountReceived
+        // сколько допускается не доплатить по сумме заказа
+        val allowed = order.customerAmount.multiply(shop.underpaymentAllowed.percentToMult(scale))
+        // если оставшаяся к оплате сумма меньше порога - считаем заказ полностью оплаченным
+        if (order.customerAmountPending <= allowed) {
+            when (order.status) {
+                // если ждали или еще не все оплатили - считаем заказ завершенным
+                OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> {
+                    // если переплата слишком большая - считаем заказ переплаченным
+                    moveToStatus(order, if (order.customerAmountPending <= -allowed) OrderStatusType.OVERPAID else OrderStatusType.COMPLETED, context)
+                }
+
+                else -> {}
+            }
+        } else {
+            // сумма еще не достаточна для завершения заказа
+            when (order.status) {
+                OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> moveToStatus(order, OrderStatusType.NOT_ENOUGH, context)
+                else -> {}
+            }
+        }
+
+        orderRepo.update(order, context).awaitSingle()
     }
 
 }
