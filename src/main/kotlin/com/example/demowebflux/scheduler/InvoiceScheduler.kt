@@ -3,6 +3,7 @@ package com.example.demowebflux.scheduler
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.service.InvoiceService
 import com.example.demowebflux.service.OrderService
+import com.example.jooq.enums.InvoiceStatusType
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
 import org.jooq.DSLContext
@@ -23,7 +24,9 @@ class InvoiceScheduler(
     fun processInvoices() {
         val now = OffsetDateTime.now()
 
+        // только НЕ завершенные счета
         val flux = invoiceRepo.findAllNotTerminated(dslContext).flatMap { invoice ->
+            // если дедлайн вышел
             if (invoice.deadline.isBefore(now)) {
                 mono {
                     dslContext.transactionCoroutine { trx ->

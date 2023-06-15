@@ -142,7 +142,7 @@ function Widget() {
                     </>}
             </>
 
-        } else if (invoice.status === 'PENDING') {
+        } else if (invoice.status === 'PENDING' || invoice.status === 'NOT_ENOUGH') {
             return <>
                 <Row>
                     <Col xs={4} className="text-start">
@@ -173,15 +173,58 @@ function Widget() {
             </>
         } else if (invoice.status === 'COMPLETED') {
             return <>
+                <Row>
+                    <Col xs={4} className="text-start">
+                        {invoice.shopName}
+                    </Col>
+                    <Col xs={8} className="text-end fw-bold">
+                        {invoice.amountReceived} {invoice.currency}
+                    </Col>
+                </Row>
+                <Row>
+                    <Col className="mt-3">
+                        <Button onClick={() => window.location = invoice.successUrl ? invoice.successUrl : invoice.shopUrl}>
+                            {t('main:return_to_site')}
+                        </Button>
+                    </Col>
+                </Row>
             </>
         } else if (invoice.status === 'EXPIRED') {
             return <>
+                <Row>
+                    <Col xs={4} className="text-start">
+                        {invoice.shopName}
+                    </Col>
+                    <Col xs={8} className="text-end fw-bold">
+                        {invoice.amountPending ? invoice.amountPending : invoice.invoiceAmount} {invoice.currency ? invoice.currency : invoice.invoiceCurrency}
+                    </Col>
+                </Row>
+                <Row>
+                    <Col className="mt-3">
+                        <Button onClick={() => window.location = invoice.failUrl ? invoice.failUrl : invoice.shopUrl}>
+                            {t('main:return_to_site')}
+                        </Button>
+                    </Col>
+                </Row>
             </>
         }
     }
 
-    return <>
-        <Row>
+    function getHeader() {
+        if (invoice.status === 'COMPLETED') {
+            return <Row>
+                <Col className="fw-bold fs-2">
+                    {t('main:completed')}
+                </Col>
+            </Row>
+        } else if (invoice.status === 'EXPIRED') {
+            return <Row>
+                <Col className="fw-bold fs-5">
+                    {t('main:expired')}
+                </Col>
+            </Row>
+        }
+        return <Row>
             <Col className="text-start" xs={8}>
                 {t('main:waiting_payment')}
             </Col>
@@ -189,6 +232,10 @@ function Widget() {
                 <Countdown date={invoice.deadline} daysInHours={true}/>
             </Col>
         </Row>
+    }
+
+    return <>
+        {getHeader()}
         <hr/>
         {getWidget()}
         <hr/>

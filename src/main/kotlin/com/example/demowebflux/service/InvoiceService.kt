@@ -132,7 +132,8 @@ class InvoiceService(
             }
 
             InvoiceStatusType.TERMINATED -> {
-                invoiceDTOConverter.toInvoiceResponseDTO(invoice, null, null)
+                val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingleOrNull()
+                invoiceDTOConverter.toInvoiceResponseDTO(invoice, order, null)
             }
         }
     }
@@ -148,17 +149,24 @@ class InvoiceService(
 
     suspend fun expire(invoice: Invoice, context: DSLContext) {
         if (invoice.status != InvoiceStatusType.TERMINATED) {
-            invoice.status = InvoiceStatusType.TERMINATED
-            invoiceRepo.updateStatus(invoice, context).awaitSingle()
+            moveToStatus(invoice, InvoiceStatusType.TERMINATED, context)
             val order = orderRepo.findByInvoiceIdForUpdateSkipLocked(invoice.id, context).awaitSingleOrNull()
 
             // у счета в процессе обязательно должен быть уже заказ
             if (invoice.status == InvoiceStatusType.PROCESSING && order == null) {
                 throw InternalErrorException("Expire PROCESSING invoice: no order")
             }
+            // если на счет уже создали заказ - его тоже заэкспайрим
             if (order != null) {
                 orderService.expire(order, context)
             }
+        }
+    }
+
+    suspend fun moveToStatus(invoice: Invoice, status: InvoiceStatusType, context: DSLContext) {
+        if (invoice.status != status) {
+            invoice.status = status
+            invoiceRepo.updateStatus(invoice, context).awaitSingle()
         }
     }
 }

@@ -15,6 +15,21 @@ data class InvoiceResponseDTO(
     val shopName: String,
 
     /**
+     * урл магазина
+     */
+    val shopUrl: String,
+
+    /**
+     * урл при успешной сделке
+     */
+    val successUrl: String?,
+
+    /**
+     * урл при ошибке сделки
+     */
+    val failUrl: String?,
+
+    /**
      * дата закрытия счета
      */
     val deadline: String,

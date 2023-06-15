@@ -88,9 +88,9 @@ create table if not exists invoice
     -- описание к счету
     description       varchar(255)             null,
     -- куда отправим пользователя при успешном завершении сделки
-    success_url       varchar(512)             not null,
+    success_url       varchar(512)             null,
     -- куда отправим в случае ошибки
-    fail_url          varchar(512)             not null,
+    fail_url          varchar(512)             null,
     -- ключ который использовался при создании счета
     api_key           char(64)                 not null,
     -- дата в которую протухает счет на оплату - закрываем его
@@ -195,8 +195,8 @@ create table if not exists blockchain_transaction_pending
     -- количество подтверждений сети при проведении транзакции
     confirmations int                          not null check ( confirmations >= 0 ),
     created       timestamp with time zone     not null default now(),
-    completed_ad  timestamp with time zone     null,
-    updated_ad    timestamp with time zone     null
+    completed_at  timestamp with time zone     null,
+    updated_at    timestamp with time zone     null
 );
 
 create type rate_source as enum ('BINANCE');

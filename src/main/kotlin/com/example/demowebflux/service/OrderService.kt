@@ -21,6 +21,7 @@ import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -35,6 +36,8 @@ class OrderService(
     private val exchangeRateService: ExchangeRateService,
     private val shopService: ShopService,
     private val walletService: WalletService,
+    @Lazy
+    private val invoiceService: InvoiceService,
     private val invoiceRepo: InvoiceRepo,
     private val orderRepo: OrderRepo,
     private val blockchainIncomeWalletRepo: BlockchainIncomeWalletRepo,
@@ -166,13 +169,15 @@ class OrderService(
     }
 
     suspend fun moveToStatus(order: Order, toStatus: OrderStatusType, context: DSLContext) {
-        val fromStatus = order.status
+        if (order.status != toStatus) {
+            val fromStatus = order.status
 
-        // обновляем статус заказа
-        order.status = toStatus
-        orderRepo.updateStatus(order, context).awaitSingle()
+            // обновляем статус заказа
+            order.status = toStatus
+            orderRepo.updateStatus(order, context).awaitSingle()
 
-        saveLog(fromStatus, order, context)
+            saveLog(fromStatus, order, context)
+        }
     }
 
     /**
@@ -180,7 +185,9 @@ class OrderService(
      * двигаем статус заказа
      */
     suspend fun addCustomerAmount(order: Order, amount: BigDecimal, context: DSLContext) {
-        val invoice = invoiceRepo.findById(order.invoiceId, context).awaitSingleOrNull()
+        log.warn("order add amount=$amount id=${order.id} ")
+
+        val invoice = invoiceRepo.findByIdForUpdateSkipLocked(order.invoiceId, context).awaitSingleOrNull()
             ?: throw InvoiceNotFoundOrLockedException(order.invoiceId.toString())
         val shop = shopService.getById(invoice.shopId, context)
 
@@ -188,15 +195,31 @@ class OrderService(
         order.customerAmountReceived += amount
         // считаем сколько еще осталось оплатить
         order.customerAmountPending = order.customerAmount - order.customerAmountReceived
+        val overpaid = if (order.customerAmountPending < BigDecimal.ZERO) -order.customerAmountPending else BigDecimal.ZERO
+
+        if (order.customerAmountPending < BigDecimal.ZERO) {
+            order.customerAmountPending = BigDecimal.ZERO
+        }
+
         // сколько допускается не доплатить по сумме заказа
-        val allowed = order.customerAmount.multiply(shop.underpaymentAllowed.percentToMult(scale))
+        val allowed = order.customerAmount.multiply(BigDecimal.ONE - shop.underpaymentAllowed.percentToMult(scale))
+        val overpaidThreshold = order.customerAmount.multiply(shop.underpaymentAllowed.percentToMult(scale))
         // если оставшаяся к оплате сумма меньше порога - считаем заказ полностью оплаченным
         if (order.customerAmountPending <= allowed) {
             when (order.status) {
                 // если ждали или еще не все оплатили - считаем заказ завершенным
                 OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> {
                     // если переплата слишком большая - считаем заказ переплаченным
-                    moveToStatus(order, if (order.customerAmountPending <= -allowed) OrderStatusType.OVERPAID else OrderStatusType.COMPLETED, context)
+                    moveToStatus(
+                        order,
+                        if (overpaid > BigDecimal.ZERO && overpaid >= overpaidThreshold)
+                            OrderStatusType.OVERPAID
+                        else
+                            OrderStatusType.COMPLETED,
+                        context
+                    )
+                    // счет на оплату также двигаем в выполненный
+                    invoiceService.moveToStatus(invoice, InvoiceStatusType.TERMINATED, context)
                 }
 
                 else -> {}
@@ -209,7 +232,8 @@ class OrderService(
             }
         }
 
-        orderRepo.update(order, context).awaitSingle()
+
+        orderRepo.updateCustomerAmount(order, context).awaitSingle()
     }
 
 }

@@ -61,9 +61,8 @@ class TronScheduler(
      * обновляем транзакции ожидающие подтверждения (это явное новые транзакции по которым не было инфы)
      * они должны изменить статус определенного заказа
      */
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 2000)
     fun updatePendingTransactions() {
-        log.debug("begin updatePendingTransactions")
         blockchainTransactionPendingRepo.findAllNotCompleted(dslContext)
             .flatMap { trxPending ->
                 val info = tronService.getTronscanTransactionInfo(trxPending.id, trxPending.blockchain).map {
@@ -75,13 +74,10 @@ class TronScheduler(
                 mono { processPendingTransaction(info, trxPending) }
             }
             .blockLast()
-        log.debug("finish updatePendingTransactions")
     }
 
     @Scheduled(fixedDelayString = "\${app.trongrid.updateInterval}")
     fun updateNewTransactions() {
-        log.debug("begin update tron")
-
         /*
         https://developers.tron.network/v3.7/reference/trc20-transaction-information-by-account-address
 
@@ -111,14 +107,12 @@ class TronScheduler(
                 }
             }
             .blockLast()
-        log.debug("finish update tron")
     }
 
     /**
      * обработать перевод Token в троне
      */
     suspend fun processToken(wallet: BlockchainIncomeWallet, order: Order, currency: Currency) {
-        log.debug("start process ${wallet.address}")
         // получаем крайние транзакции по адресу
         val trxList = tronService.getTokenTransactionsByAccount(wallet.address, currency)
             .collectList()
@@ -195,8 +189,6 @@ class TronScheduler(
                 }
             }
         }
-
-        log.debug("stop process ${wallet.address}")
     }
 
     suspend fun processPendingTransaction(info: TronscanTransactionInfo, trxPending: BlockchainTransactionPending) {
@@ -240,9 +232,12 @@ class TronScheduler(
                 if (info.tokenTransferInfo.decimals != transferInfo.decimals) throw IllegalStateException("wrong decimals")
                 if (info.tokenTransferInfo.symbol != transferInfo.symbol || !currency.token.equals(transferInfo.symbol, ignoreCase = true)) throw IllegalStateException("wrong symbol")
 
+                if (info.tokenTransferInfo.to_address != wallet.address) throw IllegalStateException("wrong receiver address")
+                if (transferInfo.to_address != wallet.address) throw IllegalStateException("wrong receiver address")
+
                 val decimals = BigDecimal.TEN.pow(info.tokenTransferInfo.decimals)
                 val amount = BigDecimal(info.tokenTransferInfo.amount_str).divide(decimals)
-                log.debug("transaction amount $amount")
+                log.warn("tronscan trx [${wallet.address}] amount $amount ${info.tokenTransferInfo.symbol} confirmed: ${info.confirmed} [${info.confirmations}]")
 
                 lockedPendingTrx.confirmations = info.confirmations
                 lockedPendingTrx.confirmed = info.confirmed
@@ -252,6 +247,7 @@ class TronScheduler(
                     // теперь сходим еще в trongrid. запросим только подтвержденные транзакции
                     // убедимся что он ее тоже видит как подтвержденную
                     val trxConfirmed = tronService.getTokenConfirmedTransactionsByAccount(wallet.address, currency).collectList().awaitSingleOrNull()
+                    log.warn("trongrid confirmed trx: ${trxConfirmed?.size}")
                     if (trxConfirmed.isNullOrEmpty()) throw IllegalStateException("no confirmed transactions from trongrid")
 
                     val confirmed = trxConfirmed.filter {
@@ -268,16 +264,16 @@ class TronScheduler(
                         // считаем ее полностью обработанной и никогда к ней больше не вернемся
                         orderService.addCustomerAmount(order, amount, context)
                         lockedPendingTrx.completed = true
-                        lockedPendingTrx.completedAd = OffsetDateTime.now()
+                        lockedPendingTrx.completedAt = OffsetDateTime.now()
                     }
                 }
+
                 // даже если транзакция еще подтверждена - запомним факт обработки
-                lockedPendingTrx.updatedAd = OffsetDateTime.now()
+                lockedPendingTrx.updatedAt = OffsetDateTime.now()
                 blockchainTransactionPendingRepo.update(lockedPendingTrx, context).awaitSingle()
             }
 
             // TODO обработка обычных TRX
         }
-        delay(1000)
     }
 }

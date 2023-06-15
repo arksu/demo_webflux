@@ -44,7 +44,10 @@ class InvoiceDTOConverter(
             currency = currency?.name,
             amount = order?.customerAmount,
             amountReceived = order?.customerAmountReceived,
-            amountPending = order?.customerAmountPending
+            amountPending = order?.customerAmountPending,
+            shopUrl = shop.url,
+            successUrl = invoice.successUrl,
+            failUrl = invoice.failUrl,
         )
     }
 }
