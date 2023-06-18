@@ -30,12 +30,22 @@ code {
 }
 
 .widget-container-row {
-    min-width: 320px;
+    min-width: 400px;
     padding: 20px;
     border-radius: 10px;
     background-color: #dfe3e3;
 
     border: 2px solid #325f6b !important;
+}
+@media screen and (max-width: 500px) {
+    .widget-container-row {
+        min-width: 360px;
+    }
+}
+@media screen and (max-width: 350px) {
+    .widget-container-row {
+        min-width: 320px;
+    }
 }
 
 .address-text {

@@ -5,7 +5,10 @@
       "help": "Help",
       "please_send": "To complete the payment please send",
       "to_address": "to address:",
-      "waiting_payment": "Waiting payment..."
+      "waiting_payment": "Waiting payment...",
+      "completed": "Payment completed",
+      "expired": "Payment expired",
+      "return_to_site": "Return to site"
     }
   },
   "ru": {
@@ -14,7 +17,10 @@
       "help": "Помощь",
       "please_send": "Для завершения платежа отправьте",
       "to_address": "на адрес:",
-      "waiting_payment": "Ожидание платежа..."
+      "waiting_payment": "Ожидание платежа...",
+      "completed": "Оплата завершена",
+      "expired": "Срок действия этого заказа истек",
+      "return_to_site": "Вернутся на сайт"
     }
   }
 }

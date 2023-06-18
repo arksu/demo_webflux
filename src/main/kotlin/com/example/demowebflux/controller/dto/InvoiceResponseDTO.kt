@@ -73,4 +73,10 @@ data class InvoiceResponseDTO(
      * сколько осталось перевести клиенту для завершения сделки
      */
     val amountPending: BigDecimal?,
+
+    /**
+     * флаг о том, что мы увидели входящую транзакцию в блокчейне и ожидаем ее подтверждения
+     * на клиенте покажем это определенным визуальным статусом
+     */
+    val isBlockchainTransactionInProcess : Boolean,
 )

@@ -1,6 +1,7 @@
 package com.example.demowebflux.converter
 
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
+import com.example.demowebflux.repo.BlockchainTransactionPendingRepo
 import com.example.demowebflux.service.CurrencyService
 import com.example.demowebflux.service.ShopService
 import com.example.jooq.enums.InvoiceStatusType
@@ -8,6 +9,7 @@ import com.example.jooq.enums.OrderStatusType
 import com.example.jooq.tables.pojos.BlockchainIncomeWallet
 import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
+import kotlinx.coroutines.reactor.awaitSingle
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
 
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component
 class InvoiceDTOConverter(
     private val currencyService: CurrencyService,
     private val shopService: ShopService,
+    private val blockchainTransactionPendingRepo: BlockchainTransactionPendingRepo,
     private val dslContext: DSLContext,
 ) {
     suspend fun toInvoiceResponseDTO(invoice: Invoice, order: Order?, wallet: BlockchainIncomeWallet?): InvoiceResponseDTO {
@@ -33,6 +36,11 @@ class InvoiceDTOConverter(
             InvoiceStatusType.TERMINATED -> order?.status ?: OrderStatusType.EXPIRED
         }
 
+        val isBlockchainTransactionInProcess = if (order != null) {
+            val count = blockchainTransactionPendingRepo.findCountNotCompletedByOrderId(order.id, dslContext).awaitSingle()
+            count > 0
+        } else false
+
         return InvoiceResponseDTO(
             invoiceId = invoice.externalId,
             invoiceAmount = invoice.amount,
@@ -48,6 +56,7 @@ class InvoiceDTOConverter(
             shopUrl = shop.url,
             successUrl = invoice.successUrl,
             failUrl = invoice.failUrl,
+            isBlockchainTransactionInProcess = isBlockchainTransactionInProcess
         )
     }
 }

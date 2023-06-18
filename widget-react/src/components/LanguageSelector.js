@@ -18,7 +18,7 @@ function LanguageSelector() {
 
     return (
         <Dropdown drop="up" align="end" onSelect={changeLanguage}>
-            <Dropdown.Toggle dir="down">
+            <Dropdown.Toggle dir="down" variant="secondary">
                 {i18n.language.toUpperCase()}
             </Dropdown.Toggle>
             <Dropdown.Menu>

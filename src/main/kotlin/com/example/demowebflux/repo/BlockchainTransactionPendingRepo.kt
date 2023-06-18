@@ -7,6 +7,8 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.toMono
+import java.util.*
 
 @Repository
 class BlockchainTransactionPendingRepo : AbstractCrudRepo<String, BlockchainTransactionPending, BlockchainTransactionPendingRecord>() {
@@ -18,6 +20,17 @@ class BlockchainTransactionPendingRepo : AbstractCrudRepo<String, BlockchainTran
         return context.selectFrom(BLOCKCHAIN_TRANSACTION_PENDING)
             .where(BLOCKCHAIN_TRANSACTION_PENDING.COMPLETED.isFalse)
             .toFluxAndMap()
+    }
+
+    fun findCountNotCompletedByOrderId(orderId: UUID, context: DSLContext): Mono<Int> {
+        return context.selectCount()
+            .from(BLOCKCHAIN_TRANSACTION_PENDING)
+            .where(BLOCKCHAIN_TRANSACTION_PENDING.COMPLETED.isFalse)
+            .and(BLOCKCHAIN_TRANSACTION_PENDING.ORDER_ID.eq(orderId))
+            .toMono()
+            .map {
+                it.value1()
+            }
     }
 
     fun update(entity: BlockchainTransactionPending, context: DSLContext): Mono<BlockchainTransactionPending> {
