@@ -63,6 +63,8 @@ create table if not exists shop
     expire_minutes       int                      not null default 30,
     -- % от суммы сделки при получении платежа в пределах которого считаем сделку завершенной
     underpayment_allowed decimal                  not null default 0.01,
+    -- урл куда шлем вебхуки по заказам
+    webhook_url          varchar(512)             not null,
     deleted              bool                     not null default false,
     created              timestamp with time zone not null default now()
 );
@@ -210,12 +212,31 @@ create table if not exists rate
     created timestamp with time zone not null default now()
 );
 
+-- отправка вебхуков мерчанту
+create table if not exists webhook
+(
+    id            bigserial,
+    url           varchar(512)             not null,
+    request_body  varchar(4096)            not null,
+    response_body varchar(4096)            null,
+    -- код ответа от мерчанта
+    response_code integer                  null,
+    -- текст ошибки (исключения)
+    error         varchar(1024)            null,
+    is_completed  boolean                  not null default false,
+    tries         integer                  not null default 0 check ( tries >= 0 ),
+    created       timestamp with time zone not null default now(),
+    sent_at       timestamp with time zone null     default null
+);
+
 -- test data
 insert into merchant(id, login, email, commission)
 values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
 
-insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, underpayment_allowed)
-values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com', 'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT', 35, 0.02);
+insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, webhook_url, underpayment_allowed)
+values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com',
+        'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT',
+        35, 'http://localhost:8080', 0.02);
 
 insert into blockchain_income_wallet (address, currency_id, is_generated, order_id)
 values ('TFMyJ4fxtCttadUTYGSqKy9iwKhFNWqEhv', 3, false, null);
