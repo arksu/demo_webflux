@@ -158,7 +158,7 @@ class InvoiceService(
             }
             // если на счет уже создали заказ - его тоже заэкспайрим
             if (order != null) {
-                orderService.expire(order, context)
+                orderService.expire(order, invoice, context)
             }
         }
     }

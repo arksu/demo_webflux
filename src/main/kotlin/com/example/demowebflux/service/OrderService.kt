@@ -9,10 +9,12 @@ import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderOperationLogRepo
 import com.example.demowebflux.repo.OrderRepo
+import com.example.demowebflux.service.dto.webhook.OrderWebhook
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.demowebflux.util.percentToMult
 import com.example.jooq.enums.InvoiceStatusType
 import com.example.jooq.enums.OrderStatusType
+import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.OrderOperationLog
 import kotlinx.coroutines.reactive.awaitFirst
@@ -36,6 +38,7 @@ class OrderService(
     private val exchangeRateService: ExchangeRateService,
     private val shopService: ShopService,
     private val walletService: WalletService,
+    private val webhookService: WebhookService,
     @Lazy
     private val invoiceService: InvoiceService,
     private val invoiceRepo: InvoiceRepo,
@@ -149,7 +152,7 @@ class OrderService(
         ).awaitSingle()
     }
 
-    suspend fun expire(order: Order, context: DSLContext) {
+    suspend fun expire(order: Order, invoice: Invoice, context: DSLContext) {
         if (statusToExpire.contains(order.status)) {
             // ищем кошелек на который ждали оплаты
             val wallet = blockchainIncomeWalletRepo.findByOrderIdForUpdateSkipLocked(order.id, context).awaitSingleOrNull()
@@ -162,19 +165,21 @@ class OrderService(
                 blockchainIncomeWalletRepo.updateOrderId(wallet, context).awaitSingle()
             }
 
-            moveToStatus(order, OrderStatusType.EXPIRED, context)
+            setOrderStatus(order, invoice, OrderStatusType.EXPIRED, context)
         } else {
             throw InternalErrorException("Expire order: wrong status ${order.status}")
         }
     }
 
-    suspend fun moveToStatus(order: Order, toStatus: OrderStatusType, context: DSLContext) {
+    suspend fun setOrderStatus(order: Order, invoice: Invoice, toStatus: OrderStatusType, context: DSLContext) {
         if (order.status != toStatus) {
             val fromStatus = order.status
 
             // обновляем статус заказа
             order.status = toStatus
             orderRepo.updateStatus(order, context).awaitSingle()
+
+            webhookService.send(order, invoice, context)
 
             saveLog(fromStatus, order, context)
         }
@@ -203,16 +208,16 @@ class OrderService(
 
         // сколько допускается не доплатить по сумме заказа
         val allowed = order.customerAmount.multiply(BigDecimal.ONE - shop.underpaymentAllowed.percentToMult(scale))
-        val overpaidThreshold = order.customerAmount.multiply(shop.underpaymentAllowed.percentToMult(scale))
         // если оставшаяся к оплате сумма меньше порога - считаем заказ полностью оплаченным
         if (order.customerAmountPending <= allowed) {
             when (order.status) {
                 // если ждали или еще не все оплатили - считаем заказ завершенным
                 OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> {
                     // если переплата слишком большая - считаем заказ переплаченным
-                    moveToStatus(
+                    setOrderStatus(
                         order,
-                        if (overpaid > BigDecimal.ZERO && overpaid >= overpaidThreshold)
+                        invoice,
+                        if (overpaid > BigDecimal.ZERO)
                             OrderStatusType.OVERPAID
                         else
                             OrderStatusType.COMPLETED,
@@ -227,7 +232,7 @@ class OrderService(
         } else {
             // сумма еще не достаточна для завершения заказа
             when (order.status) {
-                OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> moveToStatus(order, OrderStatusType.NOT_ENOUGH, context)
+                OrderStatusType.PENDING, OrderStatusType.NOT_ENOUGH -> setOrderStatus(order, invoice, OrderStatusType.NOT_ENOUGH, context)
                 else -> {}
             }
         }
