@@ -205,7 +205,7 @@ create type rate_source as enum ('BINANCE');
 -- актуальный курс валют
 create table if not exists rate
 (
-    id      bigserial,
+    id      bigserial primary key,
     name    varchar(32)              not null,
     rate    decimal                  not null,
     source  rate_source              not null,
@@ -215,18 +215,34 @@ create table if not exists rate
 -- отправка вебхуков мерчанту
 create table if not exists webhook
 (
-    id            bigserial,
-    url           varchar(512)             not null,
-    request_body  varchar(4096)            not null,
-    response_body varchar(4096)            null,
+    id           bigserial primary key,
+    shop_id      uuid references shop (id) not null,
+    url          varchar(512)              not null,
+    request_body varchar(4096)             not null,
+    is_completed boolean                   not null default false,
+    -- сколько попыток уже было сделано
+    tries        integer                   not null default 0 check ( tries >= 0 ),
+    created      timestamp with time zone  not null default now()
+);
+
+-- ответы мерчанта на вебхуки
+create table if not exists webhook_ack
+(
+    id            bigserial primary key,
+    -- ид вебхука который должны были отправить
+    webhook_id    bigint references webhook (id) not null,
+    -- тело ответа
+    response_body varchar(4096)                  null,
     -- код ответа от мерчанта
-    response_code integer                  null,
-    -- текст ошибки (исключения)
-    error         varchar(1024)            null,
-    is_completed  boolean                  not null default false,
-    tries         integer                  not null default 0 check ( tries >= 0 ),
-    created       timestamp with time zone not null default now(),
-    sent_at       timestamp with time zone null     default null
+    response_code integer                        null,
+    -- текст ошибки (исключения) если была
+    error         varchar(1024)                  null,
+    -- номер попытки
+    try_num       integer                        not null,
+    -- длительность отправки запроса (получения ответа)
+    response_time integer                        not null,
+    -- время отправки
+    created       timestamp with time zone       not null default now()
 );
 
 -- test data
