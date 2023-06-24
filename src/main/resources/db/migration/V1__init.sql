@@ -226,7 +226,7 @@ create table if not exists webhook
 );
 
 -- ответы мерчанта на вебхуки
-create table if not exists webhook_ack
+create table if not exists webhook_result
 (
     id            bigserial primary key,
     -- ид вебхука который должны были отправить

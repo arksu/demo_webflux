@@ -1,18 +1,23 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.repo.WebhookRepo
 import com.example.demowebflux.service.dto.webhook.OrderWebhook
 import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.Webhook
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.reactive.awaitSingle
 import org.jooq.DSLContext
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
 @Service
 class WebhookService(
     private val shopService: ShopService,
     private val currencyService: CurrencyService,
-    private val mapper: ObjectMapper
+    private val mapper: ObjectMapper,
+    private val webhookRepo: WebhookRepo,
+    private val dslContext: DSLContext,
 ) {
     /**
      * добавить задание на отправку вебхука мерчанту
@@ -46,6 +51,15 @@ class WebhookService(
         webhook.requestBody = mapper.writeValueAsString(webhookBody)
         webhook.isCompleted = false
         webhook.tries = 0
-        // TODO webhook repo
+
+        webhookRepo.save(webhook, context).awaitSingle()
+    }
+
+    @Scheduled(fixedDelay = 1000)
+    fun process() {
+        webhookRepo.findAllIsNotCompleted(dslContext)
+        // TODO send webhook
+//            .flatMap {
+//            }
     }
 }
