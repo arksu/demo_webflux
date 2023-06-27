@@ -123,7 +123,6 @@ class TronScheduler(
             }
         // если нет транзакций по адресу - сразу выходим
         if (trxList.isNullOrEmpty()) {
-            log.debug("stop process ${wallet.address} with empty")
             return
         }
 

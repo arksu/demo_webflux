@@ -1,21 +1,24 @@
 package com.example.demowebflux.service
 
 import com.example.demowebflux.repo.WebhookRepo
+import com.example.demowebflux.repo.WebhookResultRepo
 import com.example.demowebflux.service.dto.webhook.OrderWebhook
+import com.example.demowebflux.util.LoggerDelegate
 import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.Webhook
+import com.example.jooq.tables.pojos.WebhookResult
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import reactor.util.retry.Retry
-import java.time.Duration
 
 @Service
 class WebhookService(
@@ -25,7 +28,10 @@ class WebhookService(
     private val webhookRepo: WebhookRepo,
     private val dslContext: DSLContext,
     private val webClient: WebClient,
+    private val webhookResultRepo: WebhookResultRepo,
 ) {
+    val log by LoggerDelegate()
+
     /**
      * добавить задание на отправку вебхука мерчанту
      */
@@ -80,19 +86,25 @@ class WebhookService(
                             .contentType(MediaType.APPLICATION_JSON)
                             .body(BodyInserters.fromValue(makeWebhookBody(webhook)))
                             .retrieve()
-                            .onStatus({ status -> !status.is2xxSuccessful }) { response ->
-                                Mono.error(RuntimeException("Error: merchant return error ${response.statusCode()} $response"))
-                            }
                             .bodyToMono(String::class.java)
-                            .doOnError {
-                                // TODO
+                            .onErrorResume {
                                 webhookRepo.incErrorCount(webhook, dslContext)
+                                    .then(
+                                        Mono.error(RuntimeException("Webhook send error ${it.message}"))
+                                    )
                             }
-                            .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2)))
                     )
             }
             .parallel()
             .sequential()
             .blockLast()
+    }
+
+    fun saveError(webhook: Webhook, response: ClientResponse): Mono<Void> {
+        val result = WebhookResult()
+        result.webhookId = webhook.id
+        // TODO
+        result.error = response.bodyToMono(String::class.java).awaitSingleOrNull()
+        return webhookResultRepo.save(dslContext).then()
     }
 }
