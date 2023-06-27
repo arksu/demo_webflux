@@ -8,8 +8,14 @@ import com.example.jooq.tables.pojos.Webhook
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactive.awaitSingle
 import org.jooq.DSLContext
+import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Mono
+import reactor.util.retry.Retry
+import java.time.Duration
 
 @Service
 class WebhookService(
@@ -18,6 +24,7 @@ class WebhookService(
     private val mapper: ObjectMapper,
     private val webhookRepo: WebhookRepo,
     private val dslContext: DSLContext,
+    private val webClient: WebClient,
 ) {
     /**
      * добавить задание на отправку вебхука мерчанту
@@ -50,16 +57,42 @@ class WebhookService(
         webhook.url = shop.webhookUrl
         webhook.requestBody = mapper.writeValueAsString(webhookBody)
         webhook.isCompleted = false
-        webhook.tries = 0
+        webhook.tryCount = 0
+        webhook.errorCount = 0
 
         webhookRepo.save(webhook, context).awaitSingle()
+    }
+
+    fun makeWebhookBody(webhook: Webhook): OrderWebhook {
+        return mapper.readValue(webhook.requestBody, OrderWebhook::class.java)
     }
 
     @Scheduled(fixedDelay = 1000)
     fun process() {
         webhookRepo.findAllIsNotCompleted(dslContext)
-        // TODO send webhook
-//            .flatMap {
-//            }
+            // log try
+            .flatMap { webhook ->
+                webhookRepo.incTryCount(webhook, dslContext)
+                    .then(
+                        // send webhook
+                        webClient.post()
+                            .uri(webhook.url)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(BodyInserters.fromValue(makeWebhookBody(webhook)))
+                            .retrieve()
+                            .onStatus({ status -> !status.is2xxSuccessful }) { response ->
+                                Mono.error(RuntimeException("Error: merchant return error ${response.statusCode()} $response"))
+                            }
+                            .bodyToMono(String::class.java)
+                            .doOnError {
+                                // TODO
+                                webhookRepo.incErrorCount(webhook, dslContext)
+                            }
+                            .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2)))
+                    )
+            }
+            .parallel()
+            .sequential()
+            .blockLast()
     }
 }

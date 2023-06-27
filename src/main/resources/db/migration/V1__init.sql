@@ -221,7 +221,8 @@ create table if not exists webhook
     request_body varchar(4096)             not null,
     is_completed boolean                   not null default false,
     -- сколько попыток уже было сделано
-    tries        integer                   not null default 0 check ( tries >= 0 ),
+    try_count    integer                   not null default 0 check ( try_count >= 0 ),
+    error_count  integer                   not null default 0 check ( error_count >= 0 ),
     created      timestamp with time zone  not null default now()
 );
 
