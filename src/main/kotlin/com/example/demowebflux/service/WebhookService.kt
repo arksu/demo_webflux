@@ -104,7 +104,8 @@ class WebhookService(
         val result = WebhookResult()
         result.webhookId = webhook.id
         // TODO
-        result.error = response.bodyToMono(String::class.java).awaitSingleOrNull()
-        return webhookResultRepo.save(dslContext).then()
+//        result.error = response.bodyToMono(String::class.java).awaitSingleOrNull()
+//        return webhookResultRepo.save(dslContext).then()
+        TODO()
     }
 }
