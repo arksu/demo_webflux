@@ -10,7 +10,6 @@ import com.example.jooq.tables.pojos.Webhook
 import com.example.jooq.tables.pojos.WebhookResult
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
@@ -75,9 +74,11 @@ class WebhookService(
 
     @Scheduled(fixedDelay = 1000)
     fun process() {
-        webhookRepo.findAllIsNotCompleted(dslContext)
+        // ищем не отправленные вебхуки
+        webhookRepo.findAllIsNotCompletedLimit(100, dslContext)
             // log try
             .flatMap { webhook ->
+                // увеличиваем счетчик попыток
                 webhookRepo.incTryCount(webhook, dslContext)
                     .then(
                         // send webhook
