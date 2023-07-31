@@ -71,5 +71,11 @@ class NoActualRateException(
     val pair: String
 ) : AppException("No actual rate")
 
+@ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+class WebhookException(
+    val code: Int,
+    val webhookId: Long,
+) : AppException("Error response from webhook $webhookId code=$code")
+
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class NoFreeWalletException : AppException("No free wallet now, please try again later")

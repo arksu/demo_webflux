@@ -29,6 +29,13 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
             .toMonoAndMap()
     }
 
+    fun setCompleted(id: Long, context: DSLContext): Mono<Webhook> {
+        return context.update(WEBHOOK)
+            .set(WEBHOOK.IS_COMPLETED, true)
+            .returning()
+            .toMonoAndMap()
+    }
+
     fun incErrorCount(webhook: Webhook, context: DSLContext): Mono<Webhook> {
         return context.update(WEBHOOK)
             .set(WEBHOOK.ERROR_COUNT, WEBHOOK.ERROR_COUNT.plus(1))
