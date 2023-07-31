@@ -1,6 +1,5 @@
 package com.example.demowebflux.service
 
-import com.example.demowebflux.exception.WebhookException
 import com.example.demowebflux.repo.WebhookRepo
 import com.example.demowebflux.repo.WebhookResultRepo
 import com.example.demowebflux.service.dto.webhook.OrderWebhook
@@ -10,14 +9,15 @@ import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.Webhook
 import com.example.jooq.tables.pojos.WebhookResult
 import com.fasterxml.jackson.databind.ObjectMapper
-import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
 import org.jooq.DSLContext
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Mono
 
 @Service
 class WebhookService(
@@ -76,58 +76,57 @@ class WebhookService(
     fun process() {
         // ищем не отправленные вебхуки
         webhookRepo.findAllIsNotCompletedLimit(100, dslContext)
-            // log try
             .flatMap { webhook ->
-                // увеличиваем счетчик попыток
-                webhookRepo.incTryCount(webhook, dslContext)
-                    .then(
-                        // send webhook
-                        webClient.post()
-                            .uri(webhook.url)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .bodyValue(makeWebhookBody(webhook))
-                            .exchangeToMono { response ->
-                                val responseCode = response.statusCode().value()
-
+                mono {
+                    val upd = webhookRepo.incTryCount(webhook, dslContext).awaitSingle()
+                    // send webhook
+                    webClient.post()
+                        .uri(webhook.url)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(makeWebhookBody(webhook))
+                        .exchangeToMono { response ->
+                            mono {
                                 if (response.statusCode().is2xxSuccessful) {
-                                    webhookRepo.setCompleted(webhook.id, dslContext)
-                                        .then(
-                                            response.bodyToMono(String::class.java)
-                                                .flatMap { responseString ->
-                                                    val result = WebhookResult()
-                                                        .setWebhookId(webhook.id)
-                                                        .setResponseBody(responseString)
-                                                        .setTryNum(0)
-                                                        .setResponseTime(0)
-                                                    webhookResultRepo.save(result, dslContext)
-                                                }
-                                        )
+                                    webhookRepo.setCompleted(webhook.id, dslContext).awaitSingle()
                                 } else {
-                                    saveError(webhook, response).then(
-                                        // Handle non-successful HTTP status codes here
-                                        Mono.error(WebhookException(responseCode, webhook.id))
-                                    )
+                                    webhookRepo.incErrorCount(webhook, dslContext).awaitSingle()
                                 }
+                                saveResult(webhook, response, upd.tryCount)
                             }
-                            .onErrorResume {
-                                webhookRepo.incErrorCount(webhook, dslContext)
-                                    .then(
-                                        Mono.error(RuntimeException("Webhook send error ${it.message}"))
-                                    )
+                        }
+                        .onErrorResume {
+                            mono {
+                                webhookRepo.incErrorCount(webhook, dslContext).awaitSingle()
+                                saveError(webhook, it, upd.tryCount)
+                                null
                             }
-                    )
+                        }
+                        .awaitSingleOrNull()
+                }
             }
             .parallel()
             .sequential()
             .blockLast()
     }
 
-    fun saveError(webhook: Webhook, response: ClientResponse): Mono<WebhookResult> {
+    suspend fun saveResult(webhook: Webhook, response: ClientResponse, tryNum: Int): WebhookResult {
+
         val result = WebhookResult()
         result.webhookId = webhook.id
-        result.tryNum = 1 // TODO
+        result.responseCode = response.statusCode().value()
+        result.tryNum = tryNum
         result.responseTime = 0 // TODO
-//        result.error = response.bodyToMono(String::class.java).awaitSingleOrNull()
-        return webhookResultRepo.save(result, dslContext)
+        result.responseBody = response.bodyToMono(String::class.java).awaitSingleOrNull()
+        return webhookResultRepo.save(result, dslContext).awaitSingle()
+    }
+
+    suspend fun saveError(webhook: Webhook, th: Throwable, tryNum: Int) {
+        val result = WebhookResult()
+        result.webhookId = webhook.id
+        result.responseCode = 0
+        result.tryNum = tryNum
+        result.responseTime = 0 // TODO
+        result.responseBody = th.javaClass.simpleName + ": " + th.message
+        webhookResultRepo.save(result, dslContext).awaitSingle()
     }
 }
