@@ -4,6 +4,7 @@ import com.example.demowebflux.repo.WebhookRepo
 import com.example.demowebflux.repo.WebhookResultRepo
 import com.example.demowebflux.service.dto.webhook.OrderWebhook
 import com.example.demowebflux.util.LoggerDelegate
+import com.example.jooq.enums.WebhookStatus
 import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.Webhook
@@ -13,6 +14,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
 import org.jooq.DSLContext
+import org.jooq.kotlin.coroutines.transactionCoroutine
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -29,7 +31,6 @@ class WebhookService(
     private val webClient: WebClient,
     private val webhookResultRepo: WebhookResultRepo,
 ) {
-    val log by LoggerDelegate()
 
     /**
      * добавить задание на отправку вебхука мерчанту
@@ -61,7 +62,7 @@ class WebhookService(
         webhook.shopId = shop.id
         webhook.url = shop.webhookUrl
         webhook.requestBody = mapper.writeValueAsString(webhookBody)
-        webhook.isCompleted = false
+        webhook.status = WebhookStatus.NEW
         webhook.tryCount = 0
         webhook.errorCount = 0
 
@@ -79,25 +80,28 @@ class WebhookService(
             .flatMap { webhook ->
                 mono {
                     val upd = webhookRepo.incTryCount(webhook, dslContext).awaitSingle()
+                    val startTime = System.currentTimeMillis()
                     // send webhook
                     webClient.post()
                         .uri(webhook.url)
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(makeWebhookBody(webhook))
                         .exchangeToMono { response ->
+                            val endTime = System.currentTimeMillis()
                             mono {
                                 if (response.statusCode().is2xxSuccessful) {
                                     webhookRepo.setCompleted(webhook.id, dslContext).awaitSingle()
                                 } else {
-                                    webhookRepo.incErrorCount(webhook, dslContext).awaitSingle()
+                                    incErrorCount(webhook)
                                 }
-                                saveResult(webhook, response, upd.tryCount)
+                                saveResult(webhook, response, upd.tryCount, endTime - startTime)
                             }
                         }
                         .onErrorResume {
+                            val endTime = System.currentTimeMillis()
                             mono {
-                                webhookRepo.incErrorCount(webhook, dslContext).awaitSingle()
-                                saveError(webhook, it, upd.tryCount)
+                                incErrorCount(webhook)
+                                saveError(webhook, it, upd.tryCount, endTime - startTime)
                                 null
                             }
                         }
@@ -109,23 +113,31 @@ class WebhookService(
             .blockLast()
     }
 
-    suspend fun saveResult(webhook: Webhook, response: ClientResponse, tryNum: Int): WebhookResult {
+    suspend fun incErrorCount(webhook: Webhook) {
+        dslContext.transactionCoroutine { trx ->
+            val w = webhookRepo.incErrorCount(webhook, trx.dsl()).awaitSingle()
+            if (w.errorCount > 5) {
+                webhookRepo.setError(webhook.id, trx.dsl()).awaitSingle()
+            }
+        }
+    }
 
+    suspend fun saveResult(webhook: Webhook, response: ClientResponse, tryNum: Int, durationMs: Long): WebhookResult {
         val result = WebhookResult()
         result.webhookId = webhook.id
         result.responseCode = response.statusCode().value()
         result.tryNum = tryNum
-        result.responseTime = 0 // TODO
+        result.responseTime = durationMs.toInt()
         result.responseBody = response.bodyToMono(String::class.java).awaitSingleOrNull()
         return webhookResultRepo.save(result, dslContext).awaitSingle()
     }
 
-    suspend fun saveError(webhook: Webhook, th: Throwable, tryNum: Int) {
+    suspend fun saveError(webhook: Webhook, th: Throwable, tryNum: Int, durationMs: Long) {
         val result = WebhookResult()
         result.webhookId = webhook.id
         result.responseCode = 0
         result.tryNum = tryNum
-        result.responseTime = 0 // TODO
+        result.responseTime = durationMs.toInt()
         result.responseBody = th.javaClass.simpleName + ": " + th.message
         webhookResultRepo.save(result, dslContext).awaitSingle()
     }

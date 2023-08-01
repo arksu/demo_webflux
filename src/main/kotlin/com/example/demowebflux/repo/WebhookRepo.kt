@@ -1,6 +1,7 @@
 package com.example.demowebflux.repo
 
 import com.example.jooq.Tables.WEBHOOK
+import com.example.jooq.enums.WebhookStatus
 import com.example.jooq.tables.pojos.Webhook
 import com.example.jooq.tables.records.WebhookRecord
 import org.jooq.DSLContext
@@ -16,7 +17,7 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
 
     fun findAllIsNotCompletedLimit(limit: Int, context: DSLContext): Flux<Webhook> {
         return context.selectFrom(WEBHOOK)
-            .where(WEBHOOK.IS_COMPLETED.isFalse)
+            .where(WEBHOOK.STATUS.`in`(WebhookStatus.NEW, WebhookStatus.RETRY))
             .limit(limit)
             .toFluxAndMap()
     }
@@ -31,7 +32,14 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
 
     fun setCompleted(id: Long, context: DSLContext): Mono<Webhook> {
         return context.update(WEBHOOK)
-            .set(WEBHOOK.IS_COMPLETED, true)
+            .set(WEBHOOK.STATUS, WebhookStatus.DONE)
+            .returning()
+            .toMonoAndMap()
+    }
+
+    fun setError(id: Long, context: DSLContext): Mono<Webhook> {
+        return context.update(WEBHOOK)
+            .set(WEBHOOK.STATUS, WebhookStatus.ERROR)
             .returning()
             .toMonoAndMap()
     }

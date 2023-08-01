@@ -212,6 +212,8 @@ create table if not exists rate
     created timestamp with time zone not null default now()
 );
 
+create type webhook_status as enum ('NEW', 'DONE', 'RETRY', 'ERROR');
+
 -- отправка вебхуков мерчанту
 create table if not exists webhook
 (
@@ -219,7 +221,7 @@ create table if not exists webhook
     shop_id      uuid references shop (id) not null,
     url          varchar(512)              not null,
     request_body varchar(4096)             not null,
-    is_completed boolean                   not null default false,
+    status       webhook_status            not null,
     -- сколько попыток уже было сделано
     try_count    integer                   not null default 0 check ( try_count >= 0 ),
     error_count  integer                   not null default 0 check ( error_count >= 0 ),
