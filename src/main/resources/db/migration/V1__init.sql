@@ -61,8 +61,8 @@ create table if not exists shop
     allow_recalculation  bool                     not null default false,
     -- время жизни сделки (после завершается)
     expire_minutes       int                      not null default 30,
-    -- % от суммы сделки при получении платежа в пределах которого считаем сделку завершенной
-    underpayment_allowed decimal                  not null default 0.01,
+    -- % от суммы сделки при получении платежа в пределах которого считаем сделку завершенной (в процентах)
+    underpayment_allowed decimal                  not null default 1,
     -- урл куда шлем вебхуки по заказам
     webhook_url          varchar(512)             not null,
     deleted              bool                     not null default false,
@@ -255,7 +255,7 @@ values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@emai
 insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, webhook_url, underpayment_allowed)
 values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com',
         'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT',
-        35, 'http://localhost:8080', 0.02);
+        35, 'http://localhost:8080', 2);
 
 insert into blockchain_income_wallet (address, currency_id, is_generated, order_id)
 values ('TFMyJ4fxtCttadUTYGSqKy9iwKhFNWqEhv', 3, false, null);

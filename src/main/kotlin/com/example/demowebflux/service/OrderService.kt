@@ -3,13 +3,15 @@ package com.example.demowebflux.service
 import com.example.demowebflux.controller.dto.CreateOrderRequestDTO
 import com.example.demowebflux.controller.dto.InvoiceResponseDTO
 import com.example.demowebflux.converter.InvoiceDTOConverter
-import com.example.demowebflux.exception.*
+import com.example.demowebflux.exception.BadRequestException
+import com.example.demowebflux.exception.InternalErrorException
+import com.example.demowebflux.exception.InvoiceNotFoundOrLockedException
+import com.example.demowebflux.exception.UnprocessableEntityException
 import com.example.demowebflux.model.AddressModeEnum
 import com.example.demowebflux.repo.BlockchainIncomeWalletRepo
 import com.example.demowebflux.repo.InvoiceRepo
 import com.example.demowebflux.repo.OrderOperationLogRepo
 import com.example.demowebflux.repo.OrderRepo
-import com.example.demowebflux.service.dto.webhook.OrderWebhook
 import com.example.demowebflux.util.LoggerDelegate
 import com.example.demowebflux.util.percentToMult
 import com.example.jooq.enums.InvoiceStatusType
@@ -27,7 +29,6 @@ import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.util.*
 
 @Service
 class OrderService(
@@ -207,7 +208,7 @@ class OrderService(
         }
 
         // сколько допускается не доплатить по сумме заказа
-        val allowed = order.customerAmount.multiply(BigDecimal.ONE - shop.underpaymentAllowed.percentToMult(scale))
+        val allowed = order.customerAmount.multiply(shop.underpaymentAllowed.percentToMult(scale))
         // если оставшаяся к оплате сумма меньше порога - считаем заказ полностью оплаченным
         if (order.customerAmountPending <= allowed) {
             when (order.status) {
@@ -236,7 +237,6 @@ class OrderService(
                 else -> {}
             }
         }
-
 
         orderRepo.updateCustomerAmount(order, context).awaitSingle()
     }

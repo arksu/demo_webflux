@@ -7,8 +7,11 @@
       "to_address": "to address:",
       "waiting_payment": "Waiting payment...",
       "completed": "Payment completed",
+      "overpaid": "Overpaid",
       "expired": "Payment expired",
-      "return_to_site": "Return to site"
+      "return_to_site": "Return to site",
+      "wait_trx_confirm": "Waiting confirm transaction...",
+      "trx_confirm": "Transaction confirm..."
     }
   },
   "ru": {
@@ -19,8 +22,11 @@
       "to_address": "на адрес:",
       "waiting_payment": "Ожидание платежа...",
       "completed": "Оплата завершена",
+      "overpaid": "Переплата",
       "expired": "Срок действия этого заказа истек",
-      "return_to_site": "Вернутся на сайт"
+      "return_to_site": "Вернутся на сайт",
+      "wait_trx_confirm": "Ожидаем подтверждения транзакции...",
+      "trx_confirm": "Подтверждение транзакции..."
     }
   }
 }

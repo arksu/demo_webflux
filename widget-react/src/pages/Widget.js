@@ -1,17 +1,17 @@
-import {Link, useParams} from "react-router-dom";
-import {Button, Col, Container, Dropdown, Row, Spinner} from "react-bootstrap";
+import { Link, useParams } from "react-router-dom";
+import { Button, Col, Container, Dropdown, Row, Spinner } from "react-bootstrap";
 
 import axios from "axios";
-import {useEffect, useState} from "react";
-import {getApiErrorText, handleApiError, showError} from "../utils/apiUtils";
-import {useTranslation} from "react-i18next";
+import { useEffect, useState } from "react";
+import { getApiErrorText, handleApiError, showError } from "../utils/apiUtils";
+import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
 import Countdown from "react-countdown";
 import LanguageSelector from "../components/LanguageSelector";
 
 function Widget() {
-    let {id} = useParams()
-    const {t} = useTranslation()
+    let { id } = useParams()
+    const { t } = useTranslation()
     const [invoice, setInvoice] = useState(null);
     const [availableCurrencies, setAvailableCurrencies] = useState(null);
     const [error, setError] = useState(null);
@@ -78,7 +78,7 @@ function Widget() {
     }
     if (!invoice) {
         return <div>
-            <Spinner size="sm" animation="border" role="status" className="me-2"/>
+            <Spinner size="sm" animation="border" role="status" className="me-2" />
             Loading...
         </div>
     }
@@ -111,7 +111,7 @@ function Widget() {
             const list = availableCurrencies ? availableCurrencies.list.map(v =>
                 <div key={v.name} className="d-grid gap-2">
                     <Button className="mb-2" disabled={sendingSelectCurrency}
-                            onClick={() => selectCurrency(v.name)}>{v.amount} {v.name}
+                        onClick={() => selectCurrency(v.name)}>{v.amount} {v.name}
                     </Button>
                 </div>
             ) : null
@@ -127,7 +127,7 @@ function Widget() {
                 {!availableCurrencies && <>
                     <Row className="text-center">
                         <Col>
-                            <Spinner size="lg" animation="border" role="status"/>
+                            <Spinner size="lg" animation="border" role="status" />
                         </Col>
 
                     </Row></>}
@@ -170,8 +170,31 @@ function Widget() {
                 <Row className="fs-6 address-text justify-content-center text-break">
                     {invoice.walletAddress}
                 </Row>
+                {invoice.isBlockchainTransactionInProcess &&
+                    <Row className="justify-content-center">
+                        {t('main:wait_trx_confirm')}
+                    </Row>
+                }
             </>
         } else if (invoice.status === 'COMPLETED') {
+            return <>
+                <Row>
+                    <Col xs={4} className="text-start">
+                        {invoice.shopName}
+                    </Col>
+                    <Col xs={8} className="text-end fw-bold">
+                        {invoice.amountReceived} {invoice.currency}
+                    </Col>
+                </Row>
+                <Row>
+                    <Col className="mt-3">
+                        <Button onClick={() => window.location = invoice.successUrl ? invoice.successUrl : invoice.shopUrl}>
+                            {t('main:return_to_site')}
+                        </Button>
+                    </Col>
+                </Row>
+            </>
+        } else if (invoice.status === 'OVERPAID') {
             return <>
                 <Row>
                     <Col xs={4} className="text-start">
@@ -217,6 +240,12 @@ function Widget() {
                     {t('main:completed')}
                 </Col>
             </Row>
+        } else if (invoice.status === 'OVERPAID') {
+            return <Row>
+                <Col className="fw-bold fs-2">
+                    {t('main:overpaid')}
+                </Col>
+            </Row>
         } else if (invoice.status === 'EXPIRED') {
             return <Row>
                 <Col className="fw-bold fs-5">
@@ -226,25 +255,25 @@ function Widget() {
         }
         return <Row>
             <Col className="text-start" xs={8}>
-                {t('main:waiting_payment')}
+                {t(invoice.isBlockchainTransactionInProcess ? 'main:trx_confirm' : 'main:waiting_payment')}
             </Col>
             <Col className="text-end fw-bold" xs={4}>
-                <Countdown date={invoice.deadline} daysInHours={true}/>
+                <Countdown date={invoice.deadline} daysInHours={true} />
             </Col>
         </Row>
     }
 
     return <>
         {getHeader()}
-        <hr/>
+        <hr />
         {getWidget()}
-        <hr/>
+        <hr />
         <Row className="align-items-center">
             <Col className="text-start">
                 <Link to="">{t('main:help')}</Link>
             </Col>
             <Col className="text-end">
-                <LanguageSelector/>
+                <LanguageSelector />
             </Col>
         </Row>
     </>
