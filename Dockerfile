@@ -1,16 +1,18 @@
-FROM gradle:7.6.1-jdk17 AS build
-ARG DB_PORT
-ENV DB_PORT=$DB_PORT
-COPY --chown=gradle:gradle . /home/gradle/src
-WORKDIR /home/gradle/src
-RUN gradle flywayclean flywaymigrate bootjar --no-daemon
-
+# Unpack the built jar file and layer it
+FROM azul/zulu-openjdk-alpine:17-jre as unpacker
+COPY ./build/libs/*.jar /app/app.jar
+WORKDIR /app
+RUN java -Djarmode=layertools -jar app.jar extract
 
 FROM azul/zulu-openjdk-alpine:17-jre
 ENV JAVA_OPTS=""
 WORKDIR /app
-#COPY ./build/libs/*.jar /app/app.jar
-COPY --from=build /home/gradle/src/build/libs/*.jar /app/app.jar
+
+COPY --from=unpacker /app/dependencies/ ./
+COPY --from=unpacker /app/spring-boot-loader/ ./
+COPY --from=unpacker /app/snapshot-dependencies/ ./
+COPY --from=unpacker /app/application/ ./
+
 EXPOSE 8080
 
-ENTRYPOINT exec java $JAVA_OPTS -Dserver.port=8080 -server -jar app.jar
+ENTRYPOINT exec java $JAVA_OPTS -Dserver.port=8080 -server org.springframework.boot.loader.JarLauncher

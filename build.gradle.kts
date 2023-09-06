@@ -71,6 +71,10 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.getByName<Jar>("jar") {
+    enabled = false
+}
+
 val dbHost = System.getenv("DB_HOST") ?: "localhost"
 val dbPort = System.getenv("DB_PORT") ?: 5400
 val dbDatabase = System.getenv("DB_NAME") ?: "demo_webflux"

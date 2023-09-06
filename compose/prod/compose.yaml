@@ -1,0 +1,12 @@
+services:
+  gate:
+    image: hub_login/gate
+    pull_policy: always
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 5400
+    ports:
+      - 8080:8080

@@ -19,3 +19,10 @@ check wallet trx amount ->
     overpaid -> complete order, alert support
     less than required -> ignore trx, wallet hold as waited
 
+
+build:
+```shell
+gradle clean build -x test
+docker build --platform linux/amd64 --rm -t "hub_login/gate" .
+docker push hub_login/gate:latest
+```
