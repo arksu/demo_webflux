@@ -46,9 +46,9 @@ function Widget() {
             if (response.data.status === 'NEW') {
 
                 // TODO debug
-                setTimeout(() => {
-                    fetchAvailableCurrencies();
-                }, 300)
+                //setTimeout(() => {
+                fetchAvailableCurrencies();
+                //}, 300)
             }
             console.log(response.data)
             setInvoice(response.data)
@@ -62,13 +62,13 @@ function Widget() {
 
     useEffect(() => {
         // TODO debug
-        const timeout = setTimeout(() => {
-            fetchInvoice();
-        }, 300)
+        //const timeout = setTimeout(() => {
+        fetchInvoice();
+        //}, 300)
 
-        return () => {
-            clearTimeout(timeout)
-        }
+        //return () => {
+        //    clearTimeout(timeout)
+        //}
     }, [id]);
 
     if (error) {
