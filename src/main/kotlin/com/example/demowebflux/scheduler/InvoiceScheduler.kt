@@ -17,7 +17,6 @@ import java.time.OffsetDateTime
 class InvoiceScheduler(
     private val invoiceRepo: InvoiceRepo,
     private val dslContext: DSLContext,
-    private val orderService: OrderService,
     private val invoiceService: InvoiceService,
 ) {
     @Scheduled(fixedDelay = 1000)

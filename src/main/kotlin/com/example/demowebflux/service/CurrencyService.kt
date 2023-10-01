@@ -13,7 +13,11 @@ class CurrencyService(
     private val currencyRepo: CurrencyRepo,
     private val dslContext: DSLContext,
 ) {
+    /**
+     * список всех доступных валют храним в памяти чтобы не ходить каждый раз в базу
+     */
     val allList = ArrayList<Currency>()
+
     val mapByName = HashMap<String, Currency>()
     val mapById = HashMap<Int, Currency>()
     val mapByBlockchain = HashMap<BlockchainType, MutableList<Currency>>()

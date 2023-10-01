@@ -7,6 +7,7 @@ data class AvailableCurrenciesResponseDTO(
 ) {
     data class CurrencyAndRate(
         val name: String,
+        val displayName: String,
 
         /**
          * курс обмена на эту валюту от исходной в счете

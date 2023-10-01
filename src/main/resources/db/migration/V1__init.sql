@@ -21,11 +21,11 @@ create table if not exists currency
 );
 
 insert into currency (name, blockchain, display_name, token, contract_address, confirmations_required, enabled)
-values ('USDT-TRC20', 'TRON', 'Tether TRC-20', 'USDT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 25, false),
+values ('USDT-TRC20', 'TRON', 'USDT TRC-20', 'USDT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 25, true),
        ('TRX', 'TRON', 'Tron', null, null, 25, false),
-       ('USDT-TRC20-NILE', 'TRON-NILE', 'TEST Nile Tether TRC-20', 'USDT', 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj', 25, true),
-       ('USDD-TRC20-NILE', 'TRON-NILE', 'TEST Nile USDD TRC-20', 'USDD', 'THJ6CYd8TyNzHFrdLTYQ1iAAZDrf5sEsZU', 25, true),
-       ('TRX-NILE', 'TRON-NILE', 'TEST Nile Tron', null, null, 25, true),
+       ('USDT-TRC20-NILE', 'TRON-NILE', 'TEST Nile Tether TRC-20', 'USDT', 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj', 25, false),
+       ('USDD-TRC20-NILE', 'TRON-NILE', 'TEST Nile USDD TRC-20', 'USDD', 'THJ6CYd8TyNzHFrdLTYQ1iAAZDrf5sEsZU', 25, false),
+       ('TRX-NILE', 'TRON-NILE', 'TEST Nile Tron', null, null, 25, false),
        ('USDT-ERC20', 'ETH', 'Tether ERC-20', 'USDT', '0xdac17f958d2ee523a2206206994597c13d831ec7', 25, false),
        ('ETH', 'ETH', 'Ethereum', null, null, 25, false);
 

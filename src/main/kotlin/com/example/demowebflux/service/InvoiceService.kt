@@ -89,7 +89,7 @@ class InvoiceService(
             .filter {
                 // фильтруем только те что доступны для мерчанта
                 // либо отключаем фильтр если у мерча нет списка
-                available == null || available.contains(it.id)
+                (available == null || available.contains(it.id))
             }
             .map {
                 val rate = exchangeRateService.getRate(
@@ -106,6 +106,7 @@ class InvoiceService(
                 val calc = calcService.calcOrderAmounts(invoice, shop, referenceAmount, merchant.commission)
                 AvailableCurrenciesResponseDTO.CurrencyAndRate(
                     name = curr.name,
+                    displayName = curr.displayName,
                     rate = rate,
                     // сумма которую должен заплатить клиент
                     amount = calc.customerAmount

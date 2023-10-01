@@ -36,6 +36,7 @@ class TronService(
     )
 
     val tronscanUrl: Map<BlockchainType, String> = mapOf(
+        BlockchainType.TRON to "https://apilist.tronscanapi.com",
         BlockchainType.TRON_NILE to "https://nileapi.tronscan.org"
     )
 

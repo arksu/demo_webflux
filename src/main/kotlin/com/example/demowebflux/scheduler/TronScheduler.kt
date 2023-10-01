@@ -53,8 +53,8 @@ class TronScheduler(
             it.id
         })
 
-        val (k, a) = tronService.generateWallet()
-        println("$a : $k")
+//        val (k, a) = tronService.generateWallet()
+//        println("$a : $k")
     }
 
     /**
@@ -221,7 +221,6 @@ class TronScheduler(
                 if (contractInfo == null) throw IllegalStateException("no contractInfo in tronscan trx")
 
                 if (!contractInfo.isToken) throw IllegalStateException("this is not token")
-                if (!currency.token.equals(contractInfo.name, ignoreCase = true)) throw IllegalStateException("wrong token name")
 
                 if (info.trc20TransferInfo.isNullOrEmpty() || info.tokenTransferInfo == null) throw IllegalStateException("no trc20 info")
                 if (info.transfersAllList.isNullOrEmpty()) throw IllegalStateException("no transfers list")
