@@ -33,6 +33,7 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
     fun setCompleted(id: Long, context: DSLContext): Mono<Webhook> {
         return context.update(WEBHOOK)
             .set(WEBHOOK.STATUS, WebhookStatus.DONE)
+            .where(WEBHOOK.ID.eq(id))
             .returning()
             .toMonoAndMap()
     }
@@ -40,6 +41,7 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
     fun setError(id: Long, context: DSLContext): Mono<Webhook> {
         return context.update(WEBHOOK)
             .set(WEBHOOK.STATUS, WebhookStatus.ERROR)
+            .where(WEBHOOK.ID.eq(id))
             .returning()
             .toMonoAndMap()
     }
