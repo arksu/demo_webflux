@@ -43,6 +43,7 @@ class WebhookService(
         val webhookBody = OrderWebhook(
             merchantId = shop.merchantId,
             shopId = invoice.shopId,
+            apiKey = shop.apiKey,
             shopName = shop.name,
             invoiceId = invoice.externalId,
             status = order.status,

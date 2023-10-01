@@ -11,6 +11,8 @@ data class OrderWebhook(
      */
     val shopId: UUID,
 
+    val apiKey : String,
+
     val shopName: String,
 
     /**
