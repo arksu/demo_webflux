@@ -55,6 +55,7 @@ create table if not exists shop
     url                  varchar(512)             not null,
     -- уникальный ключ для обращений к API платформы
     api_key              char(64)                 not null unique,
+    secret_key           char(64)                 not null,
     -- кто будет оплачивать комиссию
     commission_type      commission_type          not null,
     -- разрешить перерасчет в случае не полной оплаты клиентом
@@ -252,9 +253,11 @@ create table if not exists webhook_result
 insert into merchant(id, login, email, commission)
 values ('2a3e59ff-b549-4ca2-979c-e771c117f350', 'test_merchant', 'merchant1@email.com', 1.5);
 
-insert into shop (id, merchant_id, name, url, api_key, commission_type, expire_minutes, webhook_url, underpayment_allowed)
+insert into shop (id, merchant_id, name, url, api_key, secret_key, commission_type, expire_minutes, webhook_url, underpayment_allowed)
 values ('af36f972-9abb-4c98-b7cf-12bc1f9a2a79', '2a3e59ff-b549-4ca2-979c-e771c117f350', 'shop1', 'https://google.com',
-        'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ', 'MERCHANT',
+        'XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ',
+        'ACSkij3FIpXR78vVXVslG2g7nuccInJyRGrlQvDCgZuxXCypG3lqs2jL02rnIq1O',
+        'MERCHANT',
         35, 'http://localhost:8080', 2);
 
 insert into blockchain_income_wallet (address, currency_id, is_generated, order_id)

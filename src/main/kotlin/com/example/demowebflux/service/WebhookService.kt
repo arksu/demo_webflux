@@ -1,9 +1,9 @@
 package com.example.demowebflux.service
 
+import com.example.demowebflux.repo.ShopRepo
 import com.example.demowebflux.repo.WebhookRepo
 import com.example.demowebflux.repo.WebhookResultRepo
 import com.example.demowebflux.service.dto.webhook.OrderWebhook
-import com.example.demowebflux.util.LoggerDelegate
 import com.example.jooq.enums.WebhookStatus
 import com.example.jooq.tables.pojos.Invoice
 import com.example.jooq.tables.pojos.Order
@@ -20,6 +20,9 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
+import java.util.*
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 @Service
 class WebhookService(
@@ -27,6 +30,7 @@ class WebhookService(
     private val currencyService: CurrencyService,
     private val mapper: ObjectMapper,
     private val webhookRepo: WebhookRepo,
+    private val shopRepo: ShopRepo,
     private val dslContext: DSLContext,
     private val webClient: WebClient,
     private val webhookResultRepo: WebhookResultRepo,
@@ -86,6 +90,8 @@ class WebhookService(
                     webClient.post()
                         .uri(webhook.url)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("user-agent", "cazomat")
+                        .header("X-Signature", getSignature(webhook))
                         .bodyValue(makeWebhookBody(webhook))
                         .exchangeToMono { response ->
                             val endTime = System.currentTimeMillis()
@@ -112,6 +118,16 @@ class WebhookService(
             .parallel()
             .sequential()
             .blockLast()
+    }
+
+    suspend fun getSignature(webhook: Webhook): String {
+        val shop = shopRepo.findById(webhook.shopId, dslContext).awaitSingle()
+        val secretKey = shop.secretKey
+        val hmac = Mac.getInstance("HmacSHA512")
+        val secretKeySpec = SecretKeySpec(secretKey.toByteArray(), "HmacSHA512")
+        hmac.init(secretKeySpec)
+        val hash = hmac.doFinal(webhook.requestBody.toByteArray())
+        return Base64.getEncoder().encodeToString(hash)
     }
 
     suspend fun incErrorCount(webhook: Webhook) {
