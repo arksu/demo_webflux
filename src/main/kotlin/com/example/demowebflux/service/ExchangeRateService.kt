@@ -110,6 +110,8 @@ class ExchangeRateService(
             .retrieve()
             .bodyToMono(BinanceRateResponse::class.java)
             .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(1)))
+            .timeout(Duration.ofSeconds(10))
+            .onErrorComplete()
             .block()
     }
 
