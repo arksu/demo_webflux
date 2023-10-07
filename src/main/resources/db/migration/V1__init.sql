@@ -226,6 +226,7 @@ create table if not exists webhook
     -- сколько попыток уже было сделано
     try_count    integer                   not null default 0 check ( try_count >= 0 ),
     error_count  integer                   not null default 0 check ( error_count >= 0 ),
+    signature    varchar(512)              not null,
     created      timestamp with time zone  not null default now()
 );
 

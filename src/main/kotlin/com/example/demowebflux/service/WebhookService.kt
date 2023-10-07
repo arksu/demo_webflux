@@ -70,6 +70,7 @@ class WebhookService(
         webhook.status = WebhookStatus.NEW
         webhook.tryCount = 0
         webhook.errorCount = 0
+        webhook.signature = getSignature(webhook)
 
         webhookRepo.save(webhook, context).awaitSingle()
     }
@@ -91,7 +92,7 @@ class WebhookService(
                         .uri(webhook.url)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("user-agent", "cazomat")
-                        .header("X-Signature", getSignature(webhook))
+                        .header("X-Signature", webhook.signature)
                         .bodyValue(makeWebhookBody(webhook))
                         .exchangeToMono { response ->
                             val endTime = System.currentTimeMillis()
