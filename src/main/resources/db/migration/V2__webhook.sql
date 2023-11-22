@@ -1,0 +1,1 @@
+alter table webhook add column if not exists due_date timestamp with time zone null default null;

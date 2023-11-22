@@ -15,10 +15,12 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
     override val idField = WEBHOOK.ID
     override val mapper = { it: WebhookRecord -> Webhook(it) }
 
-    fun findAllIsNotCompletedLimit(limit: Int, context: DSLContext): Flux<Webhook> {
+    fun findAllIsNotCompletedLimitForUpdateSkipLocked(limit: Int, context: DSLContext): Flux<Webhook> {
         return context.selectFrom(WEBHOOK)
             .where(WEBHOOK.STATUS.`in`(WebhookStatus.NEW, WebhookStatus.RETRY))
             .limit(limit)
+            .forUpdate()
+            .skipLocked()
             .toFluxAndMap()
     }
 

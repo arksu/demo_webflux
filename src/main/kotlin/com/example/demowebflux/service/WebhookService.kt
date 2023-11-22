@@ -10,16 +10,21 @@ import com.example.jooq.tables.pojos.Order
 import com.example.jooq.tables.pojos.Webhook
 import com.example.jooq.tables.pojos.WebhookResult
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Flux
+import reactor.core.scheduler.Schedulers
+import java.time.Duration
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -71,6 +76,7 @@ class WebhookService(
         webhook.tryCount = 0
         webhook.errorCount = 0
         webhook.signature = getSignature(webhook)
+        webhook.dueDate = null
 
         webhookRepo.save(webhook, context).awaitSingle()
     }
@@ -81,44 +87,55 @@ class WebhookService(
 
     @Scheduled(fixedDelay = 1000)
     fun process() {
-        // ищем не отправленные вебхуки
-        webhookRepo.findAllIsNotCompletedLimit(100, dslContext)
-            .flatMap { webhook ->
-                mono {
-                    val upd = webhookRepo.incTryCount(webhook, dslContext).awaitSingle()
-                    val startTime = System.currentTimeMillis()
-                    // send webhook
-                    webClient.post()
-                        .uri(webhook.url)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("user-agent", "cazomat")
-                        .header("X-Signature", webhook.signature)
-                        .bodyValue(makeWebhookBody(webhook))
-                        .exchangeToMono { response ->
-                            val endTime = System.currentTimeMillis()
-                            mono {
-                                if (response.statusCode().is2xxSuccessful) {
-                                    webhookRepo.setCompleted(webhook.id, dslContext).awaitSingle()
-                                } else {
-                                    incErrorCount(webhook)
+        mono {
+            dslContext.transactionCoroutine { trx ->
+                val context = trx.dsl()
+                // ищем не отправленные вебхуки
+                val list = webhookRepo.findAllIsNotCompletedLimitForUpdateSkipLocked(100, context).collectList().awaitFirst()
+
+                Flux.fromIterable(list)
+                    .flatMap { webhook ->
+                        mono {
+                            val upd = webhookRepo.incTryCount(webhook, context).awaitSingle()
+                            val startTime = System.currentTimeMillis()
+
+                            // TODO refactor
+
+                            // send webhook
+                            webClient.post()
+                                .uri(webhook.url)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .header(HttpHeaders.USER_AGENT, "cazomat")
+                                .header("X-Signature", webhook.signature)
+                                .bodyValue(makeWebhookBody(webhook))
+                                .exchangeToMono { response ->
+                                    val endTime = System.currentTimeMillis()
+                                    mono {
+                                        if (response.statusCode().is2xxSuccessful) {
+                                            webhookRepo.setCompleted(webhook.id, context).awaitSingle()
+                                        } else {
+                                            incErrorCount(webhook)
+                                        }
+                                        saveResult(webhook, response, upd.tryCount, endTime - startTime)
+                                    }
                                 }
-                                saveResult(webhook, response, upd.tryCount, endTime - startTime)
-                            }
+                                .onErrorResume {
+                                    val endTime = System.currentTimeMillis()
+                                    mono {
+                                        incErrorCount(webhook)
+                                        saveError(webhook, it, upd.tryCount, endTime - startTime)
+                                        null
+                                    }
+                                }
+                                .subscribeOn(Schedulers.parallel())
+                                .timeout(Duration.ofSeconds(20))
+                                .awaitSingleOrNull()
                         }
-                        .onErrorResume {
-                            val endTime = System.currentTimeMillis()
-                            mono {
-                                incErrorCount(webhook)
-                                saveError(webhook, it, upd.tryCount, endTime - startTime)
-                                null
-                            }
-                        }
-                        .awaitSingleOrNull()
-                }
+                    }
+                    .collectList()
+                    .awaitFirst()
             }
-            .parallel()
-            .sequential()
-            .blockLast()
+        }.timeout(Duration.ofSeconds(60)).subscribe()
     }
 
     suspend fun getSignature(webhook: Webhook): String {
