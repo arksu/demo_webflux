@@ -3,6 +3,7 @@ package com.example.demowebflux.repo
 import org.jooq.*
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 abstract class AbstractCrudRepo<ID, T, R : UpdatableRecord<R>> {
     abstract val table: Table<R>

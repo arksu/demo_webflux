@@ -53,8 +53,8 @@ class TronScheduler(
             it.id
         })
 
-//        val (k, a) = tronService.generateWallet()
-//        println("$a : $k")
+        val (k, a) = tronService.generateWallet()
+        println("$a : $k")
     }
 
     /**

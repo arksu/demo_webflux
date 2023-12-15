@@ -19,7 +19,8 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -52,7 +53,7 @@ class WebTests(
     private val defaultMerchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
     private val defaultApiKey = "XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ"
 
-    private val defaultCurrency = "USDT-TRC20-NILE"
+    private val defaultCurrency = "USDT-TRC20"
 
     @Autowired
     private lateinit var dslContext: DSLContext
@@ -262,17 +263,15 @@ class WebTests(
         sum: BigDecimal = BigDecimal(100),
         selectedCurrency: String = defaultCurrency
     ): InvoiceResponseDTO {
-        val wallet = createFreeWallet(defaultCurrency)
-
         val invoiceRequest = InvoiceRequestDTO(
-            apiKey,
-            "some_customer_id",
-            "order#$num",
-            defaultCurrency,
-            sum,
-            null,
-            "https://google.com",
-            "https://google.com/fail",
+            apiKey = apiKey,
+            customerId = "some_customer_id",
+            orderId = "order#$num",
+            currency = defaultCurrency,
+            amount = sum,
+            description = null,
+            successUrl = "https://google.com",
+            failUrl = "https://google.com/fail",
         )
 
         // создаем инвойс
@@ -286,22 +285,25 @@ class WebTests(
         val request = CreateOrderRequestDTO(
             invoiceResponse.id, selectedCurrency
         )
+        // создаем ордер на инвойс
         val response = createOrder(request)
         assertNotNull(response)
 
-        runBlocking {
-            val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
-            assertNotNull(invoice)
-            assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
-
-            // убедимся что созданный заказ есть в базе
-            val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle()
-            assertEquals(order.status, OrderStatusType.PENDING)
-
-            // а также что наш кошелек заблокировался
-            val updatedWallet = blockchainIncomeWalletRepo.findById(wallet.id, dslContext).awaitSingle()
-            assertEquals(order.id, updatedWallet.orderId)
+        val invoice = runBlocking {
+            invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
         }
+        assertNotNull(invoice)
+        assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
+
+        // убедимся что созданный заказ есть в базе
+        val order = runBlocking { orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingle() }
+        assertEquals(order.status, OrderStatusType.PENDING)
+
+        // а также что наш кошелек заблокировался
+        // ищем кошелк по ид ордера
+        val updatedWallet = runBlocking { blockchainIncomeWalletRepo.findByOrderId(order.id, dslContext).awaitSingleOrNull() }
+        assertNotNull(updatedWallet)
+        assertEquals(order.id, updatedWallet!!.orderId)
 
         return response
     }
@@ -383,7 +385,7 @@ class WebTests(
 
             val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
             assertNotNull(invoice)
-            assertEquals(invoice.status, InvoiceStatusType.PROCESSING)
+            assertEquals(InvoiceStatusType.PROCESSING, invoice.status)
 
             val order = orderRepo.findByInvoiceId(invoice.id, dslContext).awaitSingleOrNull()
             assertNotNull(order)

@@ -132,7 +132,9 @@ class OrderService(
 
             // занимаем кошелек
             wallet.orderId = saved.id
-            blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
+            val w = blockchainIncomeWalletRepo.updateOrderId(wallet, trx.dsl()).awaitSingle()
+            println(w.orderId)
+            println(w.id)
 
             invoiceDTOConverter.toInvoiceResponseDTO(invoice, saved, wallet)
         }

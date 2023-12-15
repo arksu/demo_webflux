@@ -3,13 +3,13 @@ import org.jooq.meta.jaxb.Logging
 
 plugins {
     val kotlinVersion = "1.8.22" // https://kotlinlang.org/
-    val springVersion = "3.1.2" // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
+    val springVersion = "3.1.6" // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
     id("org.springframework.boot") version springVersion
-    id("io.spring.dependency-management") version "1.1.2" // https://plugins.gradle.org/plugin/io.spring.dependency-management
-    id("org.flywaydb.flyway") version "9.21.1" // https://plugins.gradle.org/plugin/org.flywaydb.flyway
+    id("io.spring.dependency-management") version "1.1.4" // https://plugins.gradle.org/plugin/io.spring.dependency-management
+    id("org.flywaydb.flyway") version "9.22.3" // https://plugins.gradle.org/plugin/org.flywaydb.flyway
     id("nu.studer.jooq") version "8.2.1" // https://plugins.gradle.org/plugin/nu.studer.jooq
 }
 
@@ -31,8 +31,8 @@ dependencies {
 
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
     implementation("org.flywaydb:flyway-core:9.21.1")
-    implementation("org.jooq:jooq-kotlin:3.18.5") // https://mvnrepository.com/artifact/org.jooq/jooq
-    implementation("org.jooq:jooq-kotlin-coroutines:3.18.5")
+    implementation("org.jooq:jooq-kotlin:3.18.7") // https://mvnrepository.com/artifact/org.jooq/jooq
+    implementation("org.jooq:jooq-kotlin-coroutines:3.18.7")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
@@ -89,7 +89,7 @@ flyway {
 }
 
 jooq {
-    version.set("3.18.5") // https://mvnrepository.com/artifact/org.jooq/jooq
+    version.set("3.18.7") // https://mvnrepository.com/artifact/org.jooq/jooq
     configurations {
         create("main") {  // name of the jOOQ configuration
             generateSchemaSourceOnCompilation.set(true)  // default (can be omitted)
