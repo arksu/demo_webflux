@@ -31,7 +31,7 @@ class TronErrorException(
 class InvoiceAlreadyExists(
     @ResponseErrorProperty
     val orderId: String
-) : AppException("Invoice with the same orderId already exists")
+) : AppException("Invoice with the same orderId $orderId already exists")
 
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class CurrencyNotFoundException(

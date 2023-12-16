@@ -22,6 +22,7 @@ import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
@@ -82,6 +83,8 @@ class WebTests(
     private lateinit var webClient: WebTestClient
 
     companion object {
+        private var currentOrderNum : Int = 1
+
         @Container
         private val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:14.7-alpine")
 
@@ -106,8 +109,8 @@ class WebTests(
             defaultApiKey,
             "some_customer_id",
             "order#1",
-            "USDT-TRC20-NILE",
-            BigDecimal(0),
+            defaultCurrency,
+            BigDecimal(0), // нулевая сумма не может быть
             null,
             "https://google.com",
             "https://google.com/fail",
@@ -125,8 +128,8 @@ class WebTests(
             defaultApiKey,
             "some_customer_id",
             "order#1",
-            "USDT-TRC20-NILE",
-            BigDecimal(-1),
+            defaultCurrency,
+            BigDecimal(-1), // отрицательная сумма не может быть
             null,
             "https://google.com",
             "https://google.com/fail",
@@ -144,7 +147,7 @@ class WebTests(
             defaultApiKey,
             "some_customer_id",
             "order#1",
-            "TRX2",
+            "TRX2", // не корректная валюта
             BigDecimal(100),
             null,
             "https://google.com",
@@ -162,10 +165,10 @@ class WebTests(
     @Test
     fun testCreateWrongApiKeyInvoice() {
         val invoiceRequest = InvoiceRequestDTO(
-            "wrong_api_key",
+            "wrong_api_key", // не верный API key
             "some_customer_id",
             "order#112",
-            "USDT-TRC20-NILE",
+            defaultCurrency,
             BigDecimal(100),
             null,
             "https://google.com",
@@ -183,10 +186,12 @@ class WebTests(
 
     @Test
     fun testCreateInvoice() {
+        val orderNumber = ++currentOrderNum
+        println("orderNumber $orderNumber")
         val invoiceRequest = InvoiceRequestDTO(
             defaultApiKey,
             "some_customer_id",
-            "order#1",
+            "order#${orderNumber}",
             defaultCurrency,
             BigDecimal(100),
             null,
@@ -214,6 +219,7 @@ class WebTests(
     }
 
     fun createInvoice(request: InvoiceRequestDTO): MerchantInvoiceResponseDTO {
+        println("createInvoice ${request.orderId}")
         val result = webClient.post()
             .uri("/invoice")
             .contentType(MediaType.APPLICATION_JSON)
@@ -261,16 +267,16 @@ class WebTests(
     fun createOrderWithNumber(
         merchantId: UUID,
         apiKey: String,
-        num: Int,
-        sum: BigDecimal = BigDecimal(100),
+        orderNumber: Int,
+        amount: BigDecimal = BigDecimal(100),
         selectedCurrency: String = defaultCurrency
     ): InvoiceResponseDTO {
         val invoiceRequest = InvoiceRequestDTO(
             apiKey = apiKey,
             customerId = "some_customer_id",
-            orderId = "order#$num",
+            orderId = "order#$orderNumber",
             currency = defaultCurrency,
-            amount = sum,
+            amount = amount,
             description = null,
             successUrl = "https://google.com",
             failUrl = "https://google.com/fail",
@@ -335,8 +341,7 @@ class WebTests(
 
     @Test
     fun testCreateOrder() {
-        // #1 занят другим тестом
-        createOrderWithNumber(defaultMerchantId, defaultApiKey, 2)
+        createOrderWithNumber(defaultMerchantId, defaultApiKey, ++currentOrderNum)
     }
 
 
@@ -351,7 +356,7 @@ class WebTests(
         runBlocking {
             val shop = createMerchantAndShop(commission, false, CommissionType.CLIENT)
 
-            val response = createOrderWithNumber(shop.id, shop.apiKey, 3, sum)
+            val response = createOrderWithNumber(shop.id, shop.apiKey, ++currentOrderNum, sum)
 
             val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
             assertNotNull(invoice)
@@ -385,7 +390,7 @@ class WebTests(
         runBlocking {
             val shop = createMerchantAndShop(commission, false, CommissionType.MERCHANT)
 
-            val response = createOrderWithNumber(shop.id, shop.apiKey, 4, sum)
+            val response = createOrderWithNumber(shop.id, shop.apiKey, ++currentOrderNum, sum)
 
             val invoice = invoiceRepo.findByExternalId(response.invoiceId, dslContext).awaitSingle()
             assertNotNull(invoice)
