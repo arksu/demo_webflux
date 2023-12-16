@@ -52,6 +52,8 @@ class WebTests(
 
     private val defaultMerchantId: UUID = UUID.fromString("2a3e59ff-b549-4ca2-979c-e771c117f350")
     private val defaultApiKey = "XXuMTye9BpV8yTYYtK2epB452p9PgcHgHK3CDGbLDGwc4xNmWT7y2wmVTKtGvwyZ"
+    private val defaultSecretKey = "DVU2bHga73qyv5rR4pAWCFzktxun6dhcMPBNZKSE8J"
+    private val defaultWebhookUrl = "http://localhost:8095"
 
     private val defaultCurrency = "USDT-TRC20"
 
@@ -185,7 +187,7 @@ class WebTests(
             defaultApiKey,
             "some_customer_id",
             "order#1",
-            "USDT-TRC20-NILE",
+            defaultCurrency,
             BigDecimal(100),
             null,
             "https://google.com",
@@ -322,6 +324,8 @@ class WebTests(
                 .setApiKey(randomStringByKotlinRandom(64))
                 .setName(randomStringByKotlinRandom(12))
                 .setUrl(randomStringByKotlinRandom(12))
+                .setSecretKey(defaultSecretKey)
+                .setWebhookUrl(defaultWebhookUrl)
                 .setAllowRecalculation(allowRecalculation)
                 .setMerchantId(merch.id)
                 .setCommissionType(type),

@@ -115,7 +115,6 @@ jooq {
                         isFluentSetters = true
                         isPojos = true
                         isInterfaces = true
-
                     }
                     target.apply {
                         packageName = "com.example.jooq"
