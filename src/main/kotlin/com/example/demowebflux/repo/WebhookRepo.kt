@@ -24,14 +24,6 @@ class WebhookRepo : AbstractCrudRepo<Long, Webhook, WebhookRecord>() {
             .toFluxAndMap()
     }
 
-    fun incTryCount(webhook: Webhook, context: DSLContext): Mono<Webhook> {
-        return context.update(WEBHOOK)
-            .set(WEBHOOK.TRY_COUNT, WEBHOOK.TRY_COUNT.plus(1))
-            .where(WEBHOOK.ID.eq(webhook.id))
-            .returning()
-            .toMonoAndMap()
-    }
-
     fun setCompleted(id: Long, context: DSLContext): Mono<Webhook> {
         return context.update(WEBHOOK)
             .set(WEBHOOK.STATUS, WebhookStatus.DONE)

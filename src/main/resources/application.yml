@@ -27,6 +27,7 @@ logging:
     com.example: debug
 
 app:
+  webhookUserAgent: cazomat
   decimalScale: 8 # до скольки знаков после запятой округляем значения
   widgetUrl: ${WIDGET_URL:http://localhost:8047/invoice/}
   walletsMode: GENERATE # POOL | GENERATE

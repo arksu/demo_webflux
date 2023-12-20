@@ -182,7 +182,7 @@ class OrderService(
             order.status = toStatus
             orderRepo.updateStatus(order, context).awaitSingle()
 
-            webhookService.send(order, invoice, context)
+            webhookService.submit(order, invoice, context)
 
             saveLog(fromStatus, order, context)
         }
